@@ -1,5 +1,10 @@
 class Image < ActiveRecord::Base
 
+  # Este é apenas para a instância local!
+  def public_filename *args
+    "http://cirandas.net/#{super *args}"
+  end
+
   def self.max_size
     Image.attachment_options[:max_size]
   end

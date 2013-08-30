@@ -62,5 +62,5 @@ class ArticleBlock < Block
     self.settings[:posts_per_page] = value if value > 0
   end
 
-  settings_items :visualization_format, :type => :string, :default => 'short'
+  settings_items :visualization_format, :type => :string, :default => 'full'
 end

@@ -4347,13 +4347,13 @@ msgstr "Posts mais antigos &raquo;"
 msgid "Discussion topic"
 msgstr "Tópico de discussão"
 
-#: app/helpers/forum_helper.rb:19
-msgid "Posts"
-msgstr "Posts"
-
 #: app/helpers/forum_helper.rb:20
-msgid "Last post"
-msgstr "Último post"
+msgid "Answers"
+msgstr "Respostas"
+
+#: app/helpers/forum_helper.rb:21
+msgid "Last answer"
+msgstr "Última resposta"
 
 #: app/helpers/chat_helper.rb:5 app/views/layouts/chat.rhtml:16
 msgid "Online"
@@ -5608,12 +5608,12 @@ msgid "Send an e-mail to %s"
 msgstr "Enviar e-mail para %s"
 
 #: app/views/contact/new.rhtml:4
-msgid "Send an e-mail to administrators"
-msgstr "Enviar um e-mail para os administradores"
+msgid "Send an e-mail to page administration of this enterprise"
+msgstr "Enviar um e-mail para administração da página deste empreendimento"
 
 #: app/views/contact/new.rhtml:6
-msgid "The e-mail will be sent to the administrators of '%s'"
-msgstr "O e-mail será enviado para os administradores de '%s'"
+msgid "The e-mail will be sent to the people who administers the page of '%s'"
+msgstr "O e-mail será enviado para as pessoas que administram a página de '%s'"
 
 #: app/views/contact/new.rhtml:26
 msgid "I want to receive a copy of the message in my e-mail."
@@ -6442,17 +6442,33 @@ msgstr ""
 msgid "Enter your comment"
 msgstr "Digite seu comentário"
 
+#: app/views/comment/_comment_form.rhtml:44
+msgid "Answer"
+msgstr "Responder"
+
+#: app/views/comment/_comment_form.rhtml:90
+msgid "Enter your answer"
+msgstr "Digite sua resposta"
+
+#: app/views/comment/_comment_form.rhtml:96
+msgid "Post answer"
+msgstr "Enviar resposta"
+
 #: app/views/comment/_comment_form.rhtml:85
 msgid "Post comment"
 msgstr "Enviar comentário"
 
+#: app/models/comment.rb:95
+msgid "a comuninity which you are listed as contact email or you are an admin of its page"
+msgstr "uma comunidade que você está listado como um e-mail de contato ou você é um dos administradores da página"
+
+#: app/models/comment.rb:97
+msgid "an enterprise which you are listed as contact email or you are an admin of its page"
+msgstr "um empreendimento que você está listado como um e-mail de contato ou você é um dos administradores da página"
+
 #: app/views/comment/notifier/mail.rhtml:3
-msgid ""
-"%{sender} (%{sender_link}) created a new comment on your article "
-"\"%{article_title}\"."
-msgstr ""
-"%{sender} (%{sender_link}) criou um novo comentário no seu artigo "
-"\"%{article_title}\"."
+msgid "%{sender} (%{sender_link}) created a new comment on the article "%{article_title}" posted on %{notification_rule_msg}."
+msgstr "%{sender} (%{sender_link}) criou um novo comentário no artigo "%{article_title}" postado em %{notification_rule_msg}."
 
 #: app/views/comment/notifier/mail.rhtml:5
 #: app/views/comment/notifier/mail_to_followers.rhtml:5

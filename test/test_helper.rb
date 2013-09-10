@@ -10,6 +10,8 @@ require 'noosfero/test'
 require File.dirname(__FILE__) + '/factories'
 require File.dirname(__FILE__) + '/noosfero_doc_test'
 require File.dirname(__FILE__) + '/action_tracker_test_helper'
+plugins_factories = Dir.glob(File.join(Rails.root, 'config', 'plugins', '*','test', 'factories.rb'))
+plugins_factories.each { |f| require f.sub(/\.rb$/, '') }
 
 FileUtils.rm_rf(File.join(RAILS_ROOT, 'index', 'test'))
 

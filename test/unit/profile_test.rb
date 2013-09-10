@@ -484,7 +484,7 @@ class ProfileTest < ActiveSupport::TestCase
   should 'categorize in the entire category hierarchy' do
     c1 = fast_create(Category)
     c2 = fast_create(Category, :parent_id => c1.id)
-    c3 = fast_create(Category, :parent_id => c2.id) 
+    c3 = fast_create(Category, :parent_id => c2.id)
 
     profile = create_user('testuser').person
     profile.add_category(c3)
@@ -517,7 +517,7 @@ class ProfileTest < ActiveSupport::TestCase
 
   should 'be able to create a profile with categories' do
     pcat = create(Category)
-    c1 = create(Category, :parent_id => pcat)
+    c1 = create(Category, :parent_id => pcat.id)
     c2 = create(Category)
 
     profile = create(Profile, :category_ids => [c1.id, c2.id])
@@ -713,8 +713,8 @@ class ProfileTest < ActiveSupport::TestCase
     c3 = fast_create(Category, :parent_id => c1.id)
     profile = fast_create(Profile)
     profile.category_ids = [c2,c3,c3].map(&:id)
-    assert_equal [c2, c3], profile.categories(true)
-    assert_equal [c2, c1, c3], profile.categories_including_virtual(true)
+    assert_equivalent [c2, c3], profile.categories(true)
+    assert_equivalent [c1, c2, c3], profile.categories_including_virtual(true)
   end
 
   should 'not return nil members when a member is removed from system' do
@@ -997,7 +997,7 @@ class ProfileTest < ActiveSupport::TestCase
 
   should 'copy header when applying template' do
     template = fast_create(Profile)
-    template[:custom_header] = '{name}' 
+    template[:custom_header] = '{name}'
     template.save!
 
     p = create(Profile, :name => 'test prof')
@@ -1251,7 +1251,7 @@ class ProfileTest < ActiveSupport::TestCase
     task2 = Task.create!(:requestor => person, :target => another)
 
     person.stubs(:is_admin?).with(other).returns(true)
-    Environment.find(:all).select{|i| i != other }.each do |env| 
+    Environment.find(:all).select{|i| i != other }.each do |env|
       person.stubs(:is_admin?).with(env).returns(false)
     end
 
@@ -1265,6 +1265,12 @@ class ProfileTest < ActiveSupport::TestCase
     env.stubs(:default_hostname).returns('myenvironment.net')
     profile.stubs(:environment).returns(env)
     assert_equal 'myenvironment.net', profile.default_hostname
+  end
+
+  should 'use ssl if set on profile domain' do
+    profile = fast_create(Profile)
+    profile.domains << Domain.new(:name => 'myowndomain.net', :ssl => true)
+    assert_equal 'https', profile.default_protocol
   end
 
   should 'use its first domain hostname name if available' do
@@ -1685,7 +1691,7 @@ class ProfileTest < ActiveSupport::TestCase
     assert profile.is_on_homepage?("/#{profile.identifier}/#{homepage.slug}", homepage)
   end
 
-  
+
   should 'find profiles with image' do
     env = fast_create(Environment)
     2.times do |n|

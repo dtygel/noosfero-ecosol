@@ -1,4 +1,4 @@
-# This file is auto-generated from the current state of the database. Instead of editing this file, 
+# This file is auto-generated from the current state of the database. Instead of editing this file,
 # please use the migrations feature of Active Record to incrementally modify your database, and
 # then regenerate this schema definition.
 #
@@ -9,7 +9,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20130711213046) do
+ActiveRecord::Schema.define(:version => 20130802134445) do
 
   create_table "abuse_reports", :force => true do |t|
     t.integer  "reporter_id"
@@ -221,7 +221,6 @@ ActiveRecord::Schema.define(:version => 20130711213046) do
     t.string   "source_type"
     t.string   "user_agent"
     t.string   "referrer"
-    t.integer  "group_id"
   end
 
   add_index "comments", ["source_id", "spam"], :name => "index_comments_on_source_id_and_spam"
@@ -255,6 +254,7 @@ ActiveRecord::Schema.define(:version => 20130711213046) do
     t.integer "owner_id"
     t.boolean "is_default",      :default => false
     t.string  "google_maps_key"
+    t.boolean "ssl"
   end
 
   create_table "environments", :force => true do |t|

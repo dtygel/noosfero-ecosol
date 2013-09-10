@@ -73,12 +73,14 @@ class Environment < ActiveRecord::Base
     )
   end
 
-  def add_admin(user)
-    self.affiliate(user, Environment::Roles.admin(self.id))
+  def add_admin user
+    self.affiliate user, Environment::Roles.admin(self.id)
+    self.affiliate user, Profile::Roles.admin(self.id)
   end
 
   def remove_admin(user)
-    self.disaffiliate(user, Environment::Roles.admin(self.id))
+    self.disaffiliate user, Environment::Roles.admin(self.id)
+    self.disaffiliate user, Profile::Roles.admin(self.id)
   end
 
   def admins
@@ -250,7 +252,7 @@ class Environment < ActiveRecord::Base
   settings_items :currency_unit, :type => String, :default => '$'
   settings_items :currency_separator, :type => String, :default => '.'
   settings_items :currency_delimiter, :type => String, :default => ','
-  
+
   # Define the default number of words for automatic abstracts (leads) of articles do be shown in blog lists in the 'short' visualization format
   settings_items :automatic_abstract_length, :type => Integer, :default => 55 #words
 
@@ -278,6 +280,20 @@ class Environment < ActiveRecord::Base
   # For multiple domains acts as suggested in http://stackoverflow.com/questions/1653308/access-control-allow-origin-multiple-origin-domains
   settings_items :access_control_allow_origin, :type => Array, :default => []
   settings_items :access_control_allow_methods, :type => String
+
+  # Set to return http forbidden to host not on the allow origin list bellow
+  settings_items :restrict_to_access_control_origins, :default => false
+  # Set this according to http://www.w3.org/TR/cors/. Headers are set at every response
+  # For multiple domains acts as suggested in http://stackoverflow.com/questions/1653308/access-control-allow-origin-multiple-origin-domains
+  settings_items :access_control_allow_origin, :type => Array
+  settings_items :access_control_allow_methods, :type => String
+
+  # Configuration of the Tinymce Collaborative TextPad plugin. If you don't want to activate the plugin, set padServerUrl as "". For understanding the meanings of the parameters, please look at https://github.com/dtygel/tinymce-etherpadlite-embed/blob/master/README.md
+  # Note 1: The padServerUrl is the url of the pad just before the pad name. Normally it includes a "/p/", as for example: "http://pad.textb.org/p/".
+  # Note 2: Your chosen padServerUrl must be among the "trusted sites" configured by the admin control panel. If not, the embedded iframe will be erased when the article is saved.
+  settings_items :tinymce_plugin_etherpadlite_padServerUrl, :type => String, :default => ""
+  settings_items :tinymce_plugin_etherpadlite_padWidth, :type => String, :default => "100%"
+  settings_items :tinymce_plugin_etherpadlite_padHeight, :type => String, :default => "400px"
 
   def news_amount_by_folder=(amount)
     settings[:news_amount_by_folder] = amount.to_i
@@ -613,6 +629,14 @@ class Environment < ActiveRecord::Base
     Category.top_level_for(self)
   end
 
+  def default_domain
+    @default_domain ||= self.domains.find_by_is_default(true) || self.domains.find(:first, :order => 'id')
+  end
+
+  def default_protocol
+    default_domain.protocol if default_domain
+  end
+
   # Returns the hostname of the first domain associated to this environment.
   #
   # If #force_www is true, adds 'www.' at the beginning of the hostname. If the
@@ -620,14 +644,14 @@ class Environment < ActiveRecord::Base
   def default_hostname(email_hostname = false)
     domain = 'localhost'
     unless self.domains(true).empty?
-      domain = (self.domains.find_by_is_default(true) || self.domains.find(:first, :order => 'id')).name
+      domain = default_domain.name
       domain = email_hostname ? domain : (force_www ? ('www.' + domain) : domain)
     end
     domain
   end
 
   def top_url
-    url = 'http://'
+    url = default_protocol ? "#{default_protocol}://" : 'http://'
     url << (Noosfero.url_options.key?(:host) ? Noosfero.url_options[:host] : default_hostname)
     url << ':' << Noosfero.url_options[:port].to_s if Noosfero.url_options.key?(:port)
     url
@@ -803,7 +827,7 @@ class Environment < ActiveRecord::Base
   end
 
   def highlighted_products_with_image(options = {})
-    Product.find(:all, {:conditions => {:highlighted => true, :enterprise_id => self.enterprises.find(:all, :select => :id) }, :joins => :image}.merge(options))
+    Product.find(:all, {:conditions => {:highlighted => true, :profile_id => self.enterprises.find(:all, :select => :id) }, :joins => :image}.merge(options))
   end
 
   settings_items :home_cache_in_minutes, :type => :integer, :default => 5

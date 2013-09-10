@@ -1,9 +1,11 @@
 .gitignore
 .rbenv-*
+Gemfile.lock
 vendor/rails
 doc/api
 doc/noosfero/plugins
 tmp
+Gemfile.lock
 config/database.yml
 config/session.secret
 config/noosfero.yml

@@ -19,7 +19,7 @@
       <li><b><%= _('Phone number') %>: </b><%= @customer[:contact_phone] %></li>
       <li><b><%= _('Payment') %>: </b><%= @customer[:payment] == 'money' ? _('Money') : _('shopping_cart|Check') %></li>
       <% if @customer[:payment] == 'money' %>
-        <li><b><%= _('shopping_cart|Change') %>: </b><%= @customer[:change] %></li>
+        <li><b><%= s_('shopping_cart|Change') %>: </b><%= @customer[:change] %></li>
       <% end %>
       <% if !@customer[:address].blank? || !@customer[:city].blank? || !@customer[:zip_code].blank? || !@customer[:district].blank? || !@customer[:address_reference].blank? %>
         <li><b><%= _('Address') %>:</b>
@@ -32,6 +32,9 @@
       <% end %>
       <% if !@customer[:city].blank? %>
         <%= @customer[:city] %><br \>
+      <% end %>
+      <% if !@customer[:state].blank? %>
+        <%= @customer[:state] %><br \>
       <% end %>
       <% if !@customer[:zip_code].blank? %>
         <%= @customer[:zip_code] %>

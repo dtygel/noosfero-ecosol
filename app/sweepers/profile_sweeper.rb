@@ -4,7 +4,7 @@ class ProfileSweeper # < ActiveRecord::Observer
   include SweeperHelper
 
   def after_update(profile)
-    expire_caches(profile)
+    self.delay.expire_caches profile
   end
 
   def after_create(profile)
@@ -22,16 +22,14 @@ protected
 
     expire_profile_index(profile) if profile.person?
 
-    profile.blocks.each do |block|
-      expire_timeout_fragment(block.cache_key)
-    end
+    expire_profile_blocks(profile.blocks)
 
     expire_blogs(profile) if profile.organization?
   end
 
   def expire_statistics_block_cache(profile)
     blocks = profile.environment.blocks.select { |b| b.kind_of?(EnvironmentStatisticsBlock) }
-    BlockSweeper.expire_blocks(blocks)
+    expire_profile_blocks(blocks)
   end
 
   def expire_blogs(profile)

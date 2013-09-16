@@ -722,9 +722,10 @@ class ContentViewerControllerTest < ActionController::TestCase
 
   should 'show only beginning of blog posts if visualization_format is short' do
     login_as(profile.identifier)
+    profile.environment.expects(:automatic_abstract_length).returns(300)
 
     blog = Blog.create!(:name => 'A blog test', :profile => profile, :visualization_format => 'short')
-	profile.environment.expects(:automatic_abstract_length).returns(55)
+    
     blog.posts << TinyMceArticle.create!(:name => 'first post', :parent => blog, :profile => profile, :body => "
     	<p>The first paragraph of the article.</p>
 	    <p>The second paragraph</p>
@@ -735,7 +736,7 @@ class ContentViewerControllerTest < ActionController::TestCase
     
 	assert_tag :tag => 'img', :attributes => { :class => 'automatic-abstract-thumb', :src => 'http://this_is_an_url/this_is_an_image.png', :style => nil}
 	
-    assert_tag :tag => 'div', :attributes => { :class => 'short-post'}, :content => "The first paragraph of the article. The second paragraph The third which is a really biiiiiiig paragraph jds ksajdhf ksdfkjhsdh fakdshf askdjhfsd lfhsdlkfa dslkfah dskjahsd faksdhfk sdfkas fkjshfk sdhjf sdkjf sdkj fkdsjhfal ksdjhflaksjdhdsghfg sjhfgsdjhf sdjhgf asdjf sadj fadjhs gfas dkjgf asdjhf asdjh fjkdsg fjsdgf asdjf sadjlgf jsçlkdsjhfdsa lksajsalj aldja lkja slkdjal aj dasldkjas lkjsdj kj sjdlkjsdkfjsl lkjsdkf lk jsdkfjsjflsj kjdlsfjdslfj ..."
+    assert_tag :tag => 'div', :attributes => { :class => 'short-post'}, :content => "The first paragraph of the article. The second paragraph The third which is a really biiiiiiig paragraph jds ksajdhf ksdfkjhsdh fakdshf askdjhfsd lfhsdlkfa dslkfah dskjahsd faksdhfk sdfkas fkjshfk sdhjf sdkjf sdkj fkdsjhfal ksdjhflaksjdhdsghfg sjhfgsdjhf sdjhgf asdjf sadj fadjhs gfas dkjgf asdjhf asdjh fjkdsg fjsdgf asdjf sadjlgf jsçlkdsjhfdsa lksajsalj aldja lkja slkdjal aj dasldkjas lkjsdj kj ..."
     
   end
 

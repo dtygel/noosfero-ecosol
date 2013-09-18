@@ -1,11 +1,11 @@
 class ChangePassword < Task
 
   attr_accessor :login, :email, :password, :password_confirmation, :environment_id
-
+  
+  # FIXME ugly workaround
   def self.human_attribute_name(attrib)
     case attrib.to_sym
-    when :login:
-      _('Username')
+    when :login:  return _('Username') + ' ' + _('or') + ' ' + _('Email')
     when :email
       _('e-mail')
     when :password
@@ -16,29 +16,30 @@ class ChangePassword < Task
       _(self.superclass.human_attribute_name(attrib))
     end
   end
+  
+  # FIXME ugly substitute for find_by_login_and_environment_id
+  def self.find_by_login_or_email_and_environment_id(login, environment_id = nil)
+    environment_id ||= Environment.default.id
+    User.first :conditions => ['(login = ? OR email = ?) AND environment_id = ?', login, login, environment_id]
+  end
 
   ###################################################
   # validations for creating a ChangePassword task 
   
-  validates_presence_of :login, :email, :environment_id, :on => :create, :message => _('must be filled in')
-
-  validates_format_of :email, :on => :create, :with => Noosfero::Constants::EMAIL_FORMAT, :if => (lambda { |obj| !obj.email.blank? })
+  validates_presence_of :login, :environment_id, :on => :create, :message => _('must be filled in')
 
   validates_each :login, :on => :create do |data,attr,value|
-    unless data.login.blank? || data.email.blank?
-      user = User.find_by_login_and_environment_id(data.login, data.environment_id)
+    unless data.login.blank?
+      user = self.find_by_login_or_email_and_environment_id(data.login, data.environment_id)
       if user.nil? 
         data.errors.add(:login, _('is invalid or user does not exists.'))
-      else
-        if user.email != data.email
-          data.errors.add(:email, _('does not match the username you filled in'))
-        end
       end
     end
   end
 
   before_validation_on_create do |change_password|
-    change_password.requestor = Person.find_by_identifier_and_environment_id(change_password.login, change_password.environment_id)
+    u = change_password.class.find_by_login_or_email_and_environment_id(change_password.login, change_password.environment_id)
+    change_password.requestor = (u.nil?) ? nil : u.person
   end
 
   ###################################################

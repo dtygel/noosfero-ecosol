@@ -9,53 +9,26 @@ class ChangePasswordTest < ActiveSupport::TestCase
     assert !data.valid?
   end
   
-  should 'refuse invalid username' do
-    User.destroy_all
-
-    data = ChangePassword.new
-    data.login = 'unexisting'
-    data.email = 'example@example.com'
-    data.environment_id = Environment.default.id
-    data.valid?
-    assert data.errors.invalid?(:login)
-  end
-
-  should 'require a valid username' do
+  should 'require a valid login 1: if user puts an username' do
     User.destroy_all
     create_user('testuser', :password => 'test', :password_confirmation => 'test', :email => 'test@example.com')
 
     data = ChangePassword.new
     data.login = 'testuser'
+    data.environment_id = Environment.default.id
     data.valid?
     assert !data.errors.invalid?(:login)
   end
 
-  should 'refuse incorrect e-mail address' do
+  should 'require a valid login 2: if user puts an email' do
     User.destroy_all
     create_user('testuser', :password => 'test', :password_confirmation => 'test', :email => 'test@example.com')
 
     data = ChangePassword.new
-    data.login = 'testuser'
-    data.email = 'wrong@example.com'
+    data.login = 'test@example.com'
     data.environment_id = Environment.default.id
-
     data.valid?
     assert !data.errors.invalid?(:login)
-    assert data.errors.invalid?(:email)
-  end
-
-  should 'require the correct e-mail address' do
-    User.destroy_all
-    create_user('testuser', :password => 'test', :password_confirmation => 'test', :email => 'test@example.com')
-
-    data = ChangePassword.new
-    data.login = 'testuser'
-    data.email = 'test@example.com'
-    data.environment_id = Environment.default.id
-
-    data.valid?
-    assert !data.errors.invalid?(:login)
-    assert !data.errors.invalid?(:email)
   end
 
   should 'require correct passsword confirmation' do
@@ -63,7 +36,6 @@ class ChangePasswordTest < ActiveSupport::TestCase
 
     change = ChangePassword.new
     change.login = 'testuser'
-    change.email = 'test@example.com'
     change.environment_id = Environment.default.id
     change.save!
 
@@ -84,7 +56,6 @@ class ChangePasswordTest < ActiveSupport::TestCase
 
     change = ChangePassword.new
     change.login = 'testuser'
-    change.email = 'test@example.com'
     change.environment_id = Environment.default.id
     change.save!
 
@@ -103,7 +74,6 @@ class ChangePasswordTest < ActiveSupport::TestCase
 
     change = ChangePassword.new
     change.login = 'testuser'
-    change.email = 'test@example.com'
     change.environment_id = Environment.default.id
     change.save!
 
@@ -133,18 +103,18 @@ class ChangePasswordTest < ActiveSupport::TestCase
   end
 
   should 'have target notification description' do
-    person = fast_create(Person, :identifier => 'testuser')
+    person = create_user('testuser').person
 
-    change = ChangePassword.create(:login => 'testuser', :email => 'test@example.com', :environment_id => Environment.default.id)
+    change = ChangePassword.create(:login => 'testuser', :environment_id => Environment.default.id)
 
     assert_match(/#{change.requestor.name} wants to change its password/, change.target_notification_description)
   end
 
   should 'deliver task created message' do
-    person = fast_create(Person, :identifier => 'testuser')
-
-    task = ChangePassword.create(:login => 'testuser', :email => 'test@example.com', :environment_id => Environment.default.id)
-
+    person = create_user('testuser').person
+    
+    task = ChangePassword.create(:login => 'testuser', :environment_id => Environment.default.id)
+    
     email = TaskMailer.deliver_task_created(task)
     assert_match(/#{task.requestor.name} wants to change its password/, email.subject)
   end

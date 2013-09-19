@@ -611,7 +611,8 @@ class Article < ActiveRecord::Base
   	a = strip_tags(self.body)
     automatic_abstract_img = (first_image) ? "<img src='" + first_image + "' class = 'automatic-abstract-thumb'>" : ''
   	b = a.split[0...profile.environment.automatic_abstract_length].join(' ')
-  	b = (a == b) ? b : b + " ..."
+  	c = a.split.join(' ')
+  	b = (b == c) ? b : b + " ..."
   	b = automatic_abstract_img + b
   end
 

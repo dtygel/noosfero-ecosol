@@ -608,7 +608,7 @@ class Article < ActiveRecord::Base
   
   def automatic_abstract
   	return nil if self.body.nil?
-  	a = strip_tags(self.body)
+  	a = strip_tags(self.body.to_s)
     automatic_abstract_img = (first_image) ? "<img src='" + first_image + "' class = 'automatic-abstract-thumb'>" : ''
   	b = a.split[0...profile.environment.automatic_abstract_length].join(' ')
   	c = a.split.join(' ')

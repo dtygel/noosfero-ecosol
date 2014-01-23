@@ -2,14 +2,14 @@ class ApplicationController < ActionController::Base
 
   before_filter :setup_multitenancy
   before_filter :detect_stuff_by_domain
-  before_filter :init_noosfero_plugins
+  before_filter :init_noosfero_plugins_controller_filters
   before_filter :allow_cross_domain_access
 
   protected
 
   def default_url_options options={}
     if @domain or (@profile and @profile.default_protocol)
-      protocol = @profile ? @profile.default_protocol : @domain.protocol
+      protocol = if @profile then @profile.default_protocol else @domain.protocol end
       options.merge! :protocol => protocol if protocol != 'http'
     end
     options
@@ -31,8 +31,13 @@ class ApplicationController < ActionController::Base
   include ApplicationHelper
   layout :get_layout
   def get_layout
-    prepend_view_path('public/' + theme_path)
-    theme_option(:layout) || 'application'
+    prepend_view_path "public/#{theme_path}"
+    theme_layout = theme_option(:layout)
+    if theme_layout
+      theme_view_file('layouts/'+theme_layout) || theme_layout
+    else
+     'application'
+    end
   end
 
   filter_parameter_logging :password
@@ -50,15 +55,7 @@ class ApplicationController < ActionController::Base
   helper :document
   helper :language
 
-  def self.no_design_blocks
-    @no_design_blocks = true
-  end
-  def self.uses_design_blocks?
-    !@no_design_blocks
-  end
-  def uses_design_blocks?
-    !@no_design_blocks && self.class.uses_design_blocks?
-  end
+  include DesignHelper
 
   # Be sure to include AuthenticationSystem in Application Controller instead
   include AuthenticatedSystem
@@ -78,6 +75,7 @@ class ApplicationController < ActionController::Base
   include NeedsProfile
 
   attr_reader :environment
+  attr_reader :domain
 
   before_filter :load_terminology
 
@@ -123,8 +121,9 @@ class ApplicationController < ActionController::Base
       @profile = @domain.profile
 
       # Check if the requested profile belongs to another domain
-      if @profile && !params[:profile].blank? && params[:profile] != @profile.identifier
+      if @domain.profile and params[:profile].present? and params[:profile] != @domain.profile.identifier
         @profile = @environment.profiles.find_by_identifier params[:profile]
+        render_not_found if @profile.blank?
         redirect_to params.merge(:host => @profile.default_hostname, :protocol => @profile.default_protocol)
       end
     end
@@ -132,22 +131,23 @@ class ApplicationController < ActionController::Base
 
   include Noosfero::Plugin::HotSpot
 
-  def init_noosfero_plugins
-    plugins.each do |plugin|
-      prepend_view_path(plugin.class.view_path)
-    end
-    init_noosfero_plugins_controller_filters
-  end
-
   # This is a generic method that initialize any possible filter defined by a
   # plugin to the current controller being initialized.
   def init_noosfero_plugins_controller_filters
     plugins.each do |plugin|
-      filters = plugin.send(self.class.name.underscore + '_filters')
+      filters = plugin.send "application_controller_filters"
       filters = [filters] if !filters.kind_of?(Array)
+      filters += plugin.send "#{self.class.name.underscore}_filters"
+      filters = [filters] if !filters.kind_of?(Array)
+      controller_filters = self.class.filter_chain.map {|c| c.method }
       filters.each do |plugin_filter|
-        self.class.send(plugin_filter[:type], plugin.class.name.underscore + '_' + plugin_filter[:method_name], (plugin_filter[:options] || {}))
-        self.class.send(:define_method, plugin.class.name.underscore + '_' + plugin_filter[:method_name], plugin_filter[:block])
+        filter_method = plugin.class.name.underscore.gsub('/','_') + '_' + plugin_filter[:method_name]
+        unless controller_filters.include?(filter_method)
+          self.class.send(plugin_filter[:type], filter_method, (plugin_filter[:options] || {}))
+          self.class.send(:define_method, filter_method) do
+            instance_eval(&plugin_filter[:block]) if environment.plugin_enabled?(plugin.class)
+          end
+        end
       end
     end
   end
@@ -184,8 +184,6 @@ class ApplicationController < ActionController::Base
   end
 
   def find_by_contents(asset, scope, query, paginate_options={:page => 1}, options={})
-    scope = scope.send(options[:filter]) if options[:filter]
-
     @plugins.dispatch_first(:find_by_contents, asset, scope, query, paginate_options, options) ||
     fallback_find_by_contents(asset, scope, query, paginate_options, options)
   end
@@ -193,8 +191,9 @@ class ApplicationController < ActionController::Base
   private
 
   def fallback_find_by_contents(asset, scope, query, paginate_options, options)
-    return {:results => scope.paginate(paginate_options)} if query.blank?
-    {:results => scope.like_search(query).paginate(paginate_options)}
+    scope = scope.like_search(query) unless query.blank?
+    scope = scope.send(options[:filter]) unless options[:filter].blank?
+    {:results => scope.paginate(paginate_options)}
   end
 
 end

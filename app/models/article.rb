@@ -154,8 +154,12 @@ class Article < ActiveRecord::Base
     end
   end
 
+  def css_class_list
+    [self.class.name.underscore.dasherize]
+  end
+
   def css_class_name
-    self.class.name.underscore.dasherize
+    [css_class_list].flatten.compact.join(' ')
   end
 
   def pending_categorizations
@@ -188,7 +192,7 @@ class Article < ActiveRecord::Base
     pending_categorizations.clear
   end
 
-  acts_as_taggable  
+  acts_as_taggable
   N_('Tag list')
 
   acts_as_filesystem
@@ -268,7 +272,7 @@ class Article < ActiveRecord::Base
   end
 
   # returns the data of the article. Must be overriden in each subclass to
-  # provide the correct content for the article. 
+  # provide the correct content for the article.
   def data
     body
   end
@@ -310,6 +314,10 @@ class Article < ActiveRecord::Base
   def belongs_to_blog?
     self.parent and self.parent.blog?
   end
+  
+  def belongs_to_forum?
+    self.parent and self.parent.forum?
+  end
 
   def info_from_last_update
     last_comment = comments.last
@@ -325,7 +333,7 @@ class Article < ActiveRecord::Base
   end
 
   def view_url
-    @view_url ||= image? ? url.merge(:view => true) : url
+    @view_url ||= is_a?(UploadedFile) ? url.merge(:view => true) : url
   end
 
   def comment_url_structure(comment, action = :edit)
@@ -358,6 +366,16 @@ class Article < ActiveRecord::Base
 
   def has_posts?
     false
+  end
+
+  def download? view = nil
+    (self.uploaded_file? and not self.image?) or
+      (self.image? and view.blank?) or
+      (not self.uploaded_file? and self.mime_type != 'text/html')
+  end
+
+  def download_headers
+    {}
   end
 
   named_scope :native_translations, :conditions => { :translation_of_id => nil }
@@ -606,13 +624,18 @@ class Article < ActiveRecord::Base
       (params[:month] ? "-month-#{params[:month]}" : '')
   end
 
-  def first_paragraph
-    paragraphs = Hpricot(to_html).search('p')
-    paragraphs.empty? ? '' : paragraphs.first.to_html
+  def automatic_abstract
+  	return '' if self.body.blank? or not self.body.is_a? String
+  	a = strip_tags self.body
+    automatic_abstract_img = (first_image) ? "<img src='" + first_image + "' class = 'automatic-abstract-thumb'>" : ''
+  	b = a.split[0...profile.environment.automatic_abstract_length].join(' ')
+  	c = a.split.join(' ')
+  	b = (b == c) ? b : b + " ..."
+  	b = automatic_abstract_img + b
   end
 
   def lead
-    abstract.blank? ? first_paragraph.html_safe : abstract.html_safe
+    abstract.blank? ? automatic_abstract : abstract.html_safe
   end
 
   def short_lead
@@ -667,11 +690,15 @@ class Article < ActiveRecord::Base
   end
 
   def first_image
-    img = Hpricot(self.lead.to_s).search('img[@src]').first || Hpricot(self.body.to_s).search('img').first
+    img = Hpricot(self.abstract.to_s).search('img[@src]').first || Hpricot(self.body.to_s).search('img').first
     img.nil? ? '' : img.attributes['src']
   end
 
   delegate :region, :region_id, :environment, :environment_id, :to => :profile, :allow_nil => true
+
+  def has_macro?
+    true
+  end
 
   private
 
@@ -687,6 +714,10 @@ class Article < ActiveRecord::Base
   def sanitize_html(text)
     sanitizer = HTML::FullSanitizer.new
     sanitizer.sanitize(text)
+  end
+
+  def strip_tags(html)
+    html.gsub(/<[^>]+>/, ' ').gsub(/\s+/, ' ')
   end
 
 end

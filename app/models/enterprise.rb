@@ -10,7 +10,7 @@ class Enterprise < Organization
 
   N_('Enterprise')
 
-  has_many :products, :dependent => :destroy, :order => 'name ASC'
+  has_many :products, :foreign_key => :profile_id, :dependent => :destroy, :order => 'name ASC'
   has_many :inputs, :through => :products
   has_many :production_costs, :as => :owner
 
@@ -23,6 +23,7 @@ class Enterprise < Organization
   N_('Organization website'); N_('Historic and current context'); N_('Activities short description'); N_('City'); N_('State'); N_('Country'); N_('ZIP code')
 
   settings_items :organization_website, :historic_and_current_context, :activities_short_description, :zip_code, :city, :state, :country
+  settings_items :products_per_catalog_page, :type => :integer, :default => 6
 
   extend SetProfileRegionFromCityState::ClassMethods
   set_profile_region_from_city_state
@@ -98,7 +99,7 @@ class Enterprise < Organization
 
   def enable(owner)
     return if enabled
-    affiliate(owner, Profile::Roles.all_roles(environment.id))
+    affiliate owner, Profile::Roles.all_roles(environment.id) if owner
     update_attribute(:enabled,true)
     if environment.replace_enterprise_template_when_enable
       apply_template(template)
@@ -122,6 +123,9 @@ class Enterprise < Organization
       EnterpriseActivation.create!(:enterprise => self, :code_length => 7)
     end
   end
+  def activation_task
+    self.tasks.where(:type => 'EnterpriseActivation').first
+  end
 
   def default_set_of_blocks
     links = [
@@ -131,10 +135,13 @@ class Enterprise < Organization
     ]
     blocks = [
       [MainBlock.new],
-      [ProfileImageBlock.new, LinkListBlock.new(:links => links)],
-      []
+      [ ProfileImageBlock.new,
+        LinkListBlock.new(:links => links),
+        ProductCategoriesBlock.new
+      ],
+      [LocationBlock.new]
     ]
-    if !environment.enabled?('disable_products_for_enterprises')
+    if environment.enabled?('products_for_enterprises')
       blocks[2].unshift ProductsBlock.new
     end
     blocks

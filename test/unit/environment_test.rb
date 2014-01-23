@@ -34,22 +34,22 @@ class EnvironmentTest < ActiveSupport::TestCase
   end
 
   def test_features
-    v = Environment.new
-    v.enable('feature1')
+    v = fast_create(Environment)
+    v.enable('feature1', false)
     assert v.enabled?('feature1')
-    v.disable('feature1')
+    v.disable('feature1', false)
     assert !v.enabled?('feature1')
   end
 
   def test_enabled_features
-    v = Environment.new
-    v.enabled_features = [ 'feature1', 'feature2' ]
+    v = fast_create(Environment)
+    v.enable('feature1', false)
+    v.enable('feature2', false)
     assert v.enabled?('feature1') && v.enabled?('feature2') && !v.enabled?('feature3')
   end
 
   def test_enabled_features_no_features_enabled
-    v = Environment.new
-    v.enabled_features = nil
+    v = fast_create(Environment)
     assert !v.enabled?('feature1') && !v.enabled?('feature2') && !v.enabled?('feature3')
   end
 
@@ -299,21 +299,6 @@ class EnvironmentTest < ActiveSupport::TestCase
     assert_equal blocks - env_blocks, Block.count
   end
 
-  should 'destroy templates' do
-    env = fast_create(Environment)
-    templates = [mock, mock, mock, mock]
-    templates.each do |item|
-      item.expects(:destroy)
-    end
-
-    env.stubs(:person_template).returns(templates[0])
-    env.stubs(:community_template).returns(templates[1])
-    env.stubs(:enterprise_template).returns(templates[2])
-    env.stubs(:inactive_enterprise_template).returns(templates[3])
-
-    env.destroy
-  end
-
   should 'have boxes and blocks upon creation' do
     Environment.any_instance.stubs(:create_templates) # avoid creating templates, it's expensive
     environment = Environment.create!(:name => 'a test environment')
@@ -405,13 +390,13 @@ class EnvironmentTest < ActiveSupport::TestCase
     p1 = e1.products.create!(:name => 'test_prod1', :product_category_id => category.id)
     products = []
     3.times {|n|
-      products.push(Product.create!(:name => "product #{n}", :enterprise_id => e1.id,
+      products.push(Product.create!(:name => "product #{n}", :profile_id => e1.id,
         :product_category_id => category.id, :highlighted => true,
         :image_builder => { :uploaded_data => fixture_file_upload('/files/rails.png', 'image/png') }
       ))
     }
-    Product.create!(:name => "product 4", :enterprise_id => e1.id, :product_category_id => category.id, :highlighted => true)
-    Product.create!(:name => "product 5", :enterprise_id => e1.id, :product_category_id => category.id, :image_builder => {
+    Product.create!(:name => "product 4", :profile_id => e1.id, :product_category_id => category.id, :highlighted => true)
+    Product.create!(:name => "product 5", :profile_id => e1.id, :product_category_id => category.id, :image_builder => {
         :uploaded_data => fixture_file_upload('/files/rails.png', 'image/png')
       })
     assert_equal products, env.highlighted_products_with_image
@@ -1080,10 +1065,10 @@ class EnvironmentTest < ActiveSupport::TestCase
   end
 
   should 'get enabled features' do
-    env = Environment.new
-    env.enable('feature1')
-    env.enable('feature2')
-    env.disable('feature3')
+    env = fast_create(Environment)
+    env.enable('feature1', false)
+    env.enable('feature2', false)
+    env.disable('feature3', false)
 
     assert_includes env.enabled_features.keys, 'feature1'
     assert_includes env.enabled_features.keys, 'feature2'

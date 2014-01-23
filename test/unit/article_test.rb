@@ -107,11 +107,20 @@ class ArticleTest < ActiveSupport::TestCase
     assert_equal 'full body', a.to_html(:format=>'full body')
   end
 
-  should 'provide first paragraph of HTML version' do
+  should 'provide automatic abstract (excerpt) of HTML version' do
+    env = Environment.default
+    env.automatic_abstract_length = 55
+    env.save
     profile = create_user('testinguser').person
-    a = fast_create(Article, :name => 'my article', :profile_id => profile.id)
-    a.expects(:body).returns('<p>the first paragraph of the article</p><p>The second paragraph</p>')
-    assert_equal '<p>the first paragraph of the article</p>', a.first_paragraph
+    a = fast_create(Article, :name => 'my article', :profile_id => profile.id, :body => "
+    	<p>The first paragraph of the article.</p>
+	    <p>The second paragraph</p>
+	    <p>The third which <a href=\"link\">is a really biiiiiiig paragraph</a> jds ksajdhf ksdfkjhsdh fakdshf askdjhfsd lfhsdlkfa dslkfah dskjahsd faksdhfk sdfkas fkjshfk sdhjf sdkjf sdkj fkdsjhfal ksdjhflaksjdhdsghfg <br /><img src='http://this_is_an_url/this_is_an_image.png' style='this_is_a_style'>sjhfgsdjhf sdjhgf asdjf sadj fadjhs gfas dkjgf asdjhf asdjh fjkdsg fjsdgf asdjf sadjlgf jsçlkdsjhfdsa lksajsalj aldja lkja slkdjal aj dasldkjas lkjsdj kj sjdlkjsdkfjsl lkjsdkf lk jsdkfjsjflsj kjdlsfjdslfj</p>
+	", :abstract => '')
+
+    assert_match /The first paragraph of the article\. The second paragraph The third which is a really biiiiiiig paragraph jds ksajdhf ksdfkjhsdh fakdshf askdjhfsd lfhsdlkfa dslkfah dskjahsd faksdhfk sdfkas fkjshfk sdhjf sdkjf sdkj fkdsjhfal ksdjhflaksjdhdsghfg sjhfgsdjhf sdjhgf asdjf sadj fadjhs gfas dkjgf asdjhf asdjh fjkdsg fjsdgf asdjf sadjlgf jsçlkdsjhfdsa lksajsalj aldja lkja slkdjal aj dasldkjas lkjsdj kj \.\.\./, a.to_html(:format=>'short')
+
+    assert_equal a.to_html(:format=>'short')[0..112], "<div class=\"short-post\"><img src='http://this_is_an_url/this_is_an_image.png' class = 'automatic-abstract-thumb'>"
   end
 
   should 'inform the icon to be used' do
@@ -921,30 +930,25 @@ class ArticleTest < ActiveSupport::TestCase
     assert_equal 'lead', a.lead
   end
 
-  should 'return first paragraph as lead by default' do
+  should 'return automatic abstract as lead by default' do
     a = Article.new
-    a.stubs(:first_paragraph).returns('<p>first</p>')
-    assert_equal '<p>first</p>', a.lead
+    a.stubs(:automatic_abstract).returns('beginning')
+    assert_equal 'beginning', a.lead
   end
 
-  should 'return first paragraph as lead with empty but non-null abstract' do
+  should 'return automatic abstract as lead with empty but non-null abstract' do
     a = Article.new(:abstract => '')
-    a.stubs(:first_paragraph).returns('<p>first</p>')
-    assert_equal '<p>first</p>', a.lead
-  end
-
-  should 'return blank as lead when article has no paragraphs' do
-    a = Article.new(:body => "<div>an article with content <em>but without</em> a paragraph</div>")
-    assert_equal '', a.lead
+    a.stubs(:automatic_abstract).returns('beginning')
+    assert_equal 'beginning', a.lead
   end
 
   should 'have short lead' do
-    a = fast_create(TinyMceArticle, :body => '<p>' + ('a' *180) + '</p>')
+    a = fast_create(TinyMceArticle, :profile_id => profile.id, :body => '<p>' + ('a' *180) + '</p>')
     assert_equal 170, a.short_lead.length
   end
 
   should 'remove html from short lead' do
-    a = Article.new(:body => "<p>an article with html that should be <em>removed</em></p>")
+    a = Article.new(:profile_id => profile.id, :body => "<p>an article with html that should be <em>removed</em></p>")
     assert_equal 'an article with html that should be removed', a.short_lead
   end
 
@@ -1564,7 +1568,7 @@ class ArticleTest < ActiveSupport::TestCase
     c4 = fast_create(RssFeed, :name => 'Testing article 4', :body => 'Article body 4', :profile_id => profile.id)
     c5 = fast_create(TextileArticle, :name => 'Testing article 5', :body => 'Article body 5', :profile_id => profile.id)
 
-    assert_equal [c1,c2,c5], Article.text_articles
+    assert_equivalent [c1,c2,c5], Article.text_articles
   end
 
   should 'delegate region info to profile' do
@@ -1742,6 +1746,26 @@ class ArticleTest < ActiveSupport::TestCase
   should "author_id return nil if there is no article's author" do
     article = Article.create!(:name => 'Test', :profile => profile, :last_changed_by => nil)
     assert_nil article.author_id
+  end
+
+  should 'identify if belongs to forum' do
+    p = create_user('user_forum_test').person
+    forum = fast_create(Forum, :name => 'Forum test', :profile_id => p.id)
+    post = fast_create(TextileArticle, :name => 'First post', :profile_id => p.id, :parent_id => forum.id)
+    assert post.belongs_to_forum?
+  end
+
+  should 'not belongs to forum' do
+    p = create_user('user_forum_test').person
+    blog = fast_create(Blog, :name => 'Not Forum', :profile_id => p.id)
+    a = fast_create(TextileArticle, :name => 'Not forum post', :profile_id => p.id, :parent_id => blog.id)
+    assert !a.belongs_to_forum?
+  end
+
+  should 'not belongs to forum if do not have a parent' do
+    p = create_user('user_forum_test').person
+    a = fast_create(TextileArticle, :name => 'Orphan post', :profile_id => p.id)
+    assert !a.belongs_to_forum?
   end
 
 end

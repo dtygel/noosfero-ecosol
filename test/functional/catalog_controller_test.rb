@@ -10,6 +10,7 @@ class CatalogControllerTest < ActionController::TestCase
     @request    = ActionController::TestRequest.new
     @response   = ActionController::TestResponse.new
 
+    Environment.default.enable('products_for_enterprises')
     @enterprise = fast_create(Enterprise, :name => 'My enterprise', :identifier => 'testent')
     @product_category = fast_create(ProductCategory)
   end
@@ -18,7 +19,7 @@ class CatalogControllerTest < ActionController::TestCase
   def test_local_files_reference
     assert_local_files_reference :get, :index, :profile => @enterprise.identifier
   end
-  
+
   def test_valid_xhtml
     assert_valid_xhtml
   end
@@ -33,7 +34,7 @@ class CatalogControllerTest < ActionController::TestCase
     get :index, :profile => 'testent'
     assert_response :success
   end
-  
+
   should 'list products of enterprise' do
     get :index, :profile => @enterprise.identifier
     assert_kind_of Array, assigns(:products)
@@ -41,7 +42,7 @@ class CatalogControllerTest < ActionController::TestCase
 
   should 'paginate enterprise products list' do
     1.upto(12).map do
-      fast_create(Product, :enterprise_id => @enterprise.id)
+      fast_create(Product, :profile_id => @enterprise.id)
     end
 
     assert_equal 12, @enterprise.products.count
@@ -52,7 +53,7 @@ class CatalogControllerTest < ActionController::TestCase
 
   should 'not give access if environment do not let' do
     env = Environment.default
-    env.enable('disable_products_for_enterprises')
+    env.disable('products_for_enterprises')
     env.save!
     ent = fast_create(Enterprise, :name => 'test ent', :identifier => 'test_ent', :environment_id => env.id)
     get :index, :profile => ent.identifier
@@ -91,7 +92,7 @@ class CatalogControllerTest < ActionController::TestCase
       end
     end
 
-    product = fast_create(Product, :enterprise_id => @enterprise.id)
+    product = fast_create(Product, :profile_id => @enterprise.id)
     environment = Environment.default
     environment.enable_plugin(Plugin1.name)
     environment.enable_plugin(Plugin2.name)
@@ -107,10 +108,10 @@ class CatalogControllerTest < ActionController::TestCase
     pc2 = ProductCategory.create!(:name => "PC2", :environment => @enterprise.environment, :parent_id => pc1.id)
     pc3 = ProductCategory.create!(:name => "PC3", :environment => @enterprise.environment, :parent_id => pc1.id)
     pc4 = ProductCategory.create!(:name => "PC4", :environment => @enterprise.environment, :parent_id => pc2.id)
-    p1 = fast_create(Product, :product_category_id => pc1.id, :enterprise_id => @enterprise.id)
-    p2 = fast_create(Product, :product_category_id => pc2.id, :enterprise_id => @enterprise.id)
-    p3 = fast_create(Product, :product_category_id => pc3.id, :enterprise_id => @enterprise.id)
-    p4 = fast_create(Product, :product_category_id => pc4.id, :enterprise_id => @enterprise.id)
+    p1 = fast_create(Product, :product_category_id => pc1.id, :profile_id => @enterprise.id)
+    p2 = fast_create(Product, :product_category_id => pc2.id, :profile_id => @enterprise.id)
+    p3 = fast_create(Product, :product_category_id => pc3.id, :profile_id => @enterprise.id)
+    p4 = fast_create(Product, :product_category_id => pc4.id, :profile_id => @enterprise.id)
 
     get :index, :profile => @enterprise.identifier, :level => pc1.id
 
@@ -125,10 +126,10 @@ class CatalogControllerTest < ActionController::TestCase
     pc2 = ProductCategory.create!(:name => "PC2", :environment => @enterprise.environment, :parent_id => pc1.id)
     pc3 = ProductCategory.create!(:name => "PC3", :environment => @enterprise.environment, :parent_id => pc1.id)
     pc4 = ProductCategory.create!(:name => "PC4", :environment => @enterprise.environment, :parent_id => pc2.id)
-    p1 = fast_create(Product, :product_category_id => pc1.id, :enterprise_id => @enterprise.id)
-    p2 = fast_create(Product, :product_category_id => pc2.id, :enterprise_id => @enterprise.id)
-    p3 = fast_create(Product, :product_category_id => pc3.id, :enterprise_id => @enterprise.id)
-    p4 = fast_create(Product, :product_category_id => pc4.id, :enterprise_id => @enterprise.id)
+    p1 = fast_create(Product, :product_category_id => pc1.id, :profile_id => @enterprise.id)
+    p2 = fast_create(Product, :product_category_id => pc2.id, :profile_id => @enterprise.id)
+    p3 = fast_create(Product, :product_category_id => pc3.id, :profile_id => @enterprise.id)
+    p4 = fast_create(Product, :product_category_id => pc4.id, :profile_id => @enterprise.id)
 
     get :index, :profile => @enterprise.identifier, :level => pc2.id
 
@@ -139,12 +140,12 @@ class CatalogControllerTest < ActionController::TestCase
   end
 
   should 'get products ordered by availability, highlighted and then name' do
-    p1 = fast_create(Product, :enterprise_id => @enterprise.id, :name => 'Zebra', :available => true, :highlighted => true)
-    p2 = fast_create(Product, :enterprise_id => @enterprise.id, :name => 'Car', :available => true)
-    p3 = fast_create(Product, :enterprise_id => @enterprise.id, :name => 'Panda', :available => true)
-    p4 = fast_create(Product, :enterprise_id => @enterprise.id, :name => 'Pen', :available => false, :highlighted => true)
-    p5 = fast_create(Product, :enterprise_id => @enterprise.id, :name => 'Ball', :available => false)
-    p6 = fast_create(Product, :enterprise_id => @enterprise.id, :name => 'Medal', :available => false)
+    p1 = fast_create(Product, :profile_id => @enterprise.id, :name => 'Zebra', :available => true, :highlighted => true)
+    p2 = fast_create(Product, :profile_id => @enterprise.id, :name => 'Car', :available => true)
+    p3 = fast_create(Product, :profile_id => @enterprise.id, :name => 'Panda', :available => true)
+    p4 = fast_create(Product, :profile_id => @enterprise.id, :name => 'Pen', :available => false, :highlighted => true)
+    p5 = fast_create(Product, :profile_id => @enterprise.id, :name => 'Ball', :available => false)
+    p6 = fast_create(Product, :profile_id => @enterprise.id, :name => 'Medal', :available => false)
 
     get :index, :profile => @enterprise.identifier
 
@@ -174,10 +175,10 @@ class CatalogControllerTest < ActionController::TestCase
     pc2 = ProductCategory.create!(:name => "PC2", :environment => @enterprise.environment, :parent_id => pc1.id)
     pc3 = ProductCategory.create!(:name => "PC3", :environment => @enterprise.environment, :parent_id => pc1.id)
     pc4 = ProductCategory.create!(:name => "PC4", :environment => @enterprise.environment, :parent_id => pc2.id)
-    p1 = fast_create(Product, :product_category_id => pc1.id, :enterprise_id => @enterprise.id)
-    p2 = fast_create(Product, :product_category_id => pc2.id, :enterprise_id => @enterprise.id)
-    p3 = fast_create(Product, :product_category_id => pc3.id, :enterprise_id => @enterprise.id)
-    p4 = fast_create(Product, :product_category_id => pc4.id, :enterprise_id => @enterprise.id)
+    p1 = fast_create(Product, :product_category_id => pc1.id, :profile_id => @enterprise.id)
+    p2 = fast_create(Product, :product_category_id => pc2.id, :profile_id => @enterprise.id)
+    p3 = fast_create(Product, :product_category_id => pc3.id, :profile_id => @enterprise.id)
+    p4 = fast_create(Product, :product_category_id => pc4.id, :profile_id => @enterprise.id)
 
     get :index, :profile => @enterprise.identifier
 
@@ -193,10 +194,10 @@ class CatalogControllerTest < ActionController::TestCase
     pc2 = ProductCategory.create!(:name => "PC2", :environment => @enterprise.environment, :parent_id => pc1.id)
     pc3 = ProductCategory.create!(:name => "PC3", :environment => @enterprise.environment, :parent_id => pc1.id)
     pc4 = ProductCategory.create!(:name => "PC4", :environment => @enterprise.environment, :parent_id => pc2.id)
-    p1 = fast_create(Product, :product_category_id => pc1.id, :enterprise_id => @enterprise.id)
-    p2 = fast_create(Product, :product_category_id => pc2.id, :enterprise_id => @enterprise.id)
-    p3 = fast_create(Product, :product_category_id => pc3.id, :enterprise_id => @enterprise.id)
-    p4 = fast_create(Product, :product_category_id => pc4.id, :enterprise_id => @enterprise.id)
+    p1 = fast_create(Product, :product_category_id => pc1.id, :profile_id => @enterprise.id)
+    p2 = fast_create(Product, :product_category_id => pc2.id, :profile_id => @enterprise.id)
+    p3 = fast_create(Product, :product_category_id => pc3.id, :profile_id => @enterprise.id)
+    p4 = fast_create(Product, :product_category_id => pc4.id, :profile_id => @enterprise.id)
 
     get :index, :profile => @enterprise.identifier, :level => pc4.id
 
@@ -208,8 +209,8 @@ class CatalogControllerTest < ActionController::TestCase
 
   should 'add product status on the class css' do
     category = ProductCategory.create!(:name => "Cateogry", :environment => @enterprise.environment)
-    p1 = fast_create(Product, :product_category_id => category.id, :enterprise_id => @enterprise.id, :highlighted => true)
-    p2 = fast_create(Product, :product_category_id => category.id, :enterprise_id => @enterprise.id, :available => false)
+    p1 = fast_create(Product, :product_category_id => category.id, :profile_id => @enterprise.id, :highlighted => true)
+    p2 = fast_create(Product, :product_category_id => category.id, :profile_id => @enterprise.id, :available => false)
 
     get :index, :profile => @enterprise.identifier
 
@@ -224,14 +225,28 @@ class CatalogControllerTest < ActionController::TestCase
     pc2 = ProductCategory.create!(:name => "Bananas", :environment => environment)
     pc3 = ProductCategory.create!(:name => "Sodas", :environment => environment)
     pc4 = ProductCategory.create!(:name => "Pies", :environment => environment)
-    p1 = fast_create(Product, :product_category_id => pc1.id, :enterprise_id => @enterprise.id)
-    p2 = fast_create(Product, :product_category_id => pc2.id, :enterprise_id => @enterprise.id)
-    p3 = fast_create(Product, :product_category_id => pc3.id, :enterprise_id => @enterprise.id)
-    p4 = fast_create(Product, :product_category_id => pc4.id, :enterprise_id => @enterprise.id)
+    p1 = fast_create(Product, :product_category_id => pc1.id, :profile_id => @enterprise.id)
+    p2 = fast_create(Product, :product_category_id => pc2.id, :profile_id => @enterprise.id)
+    p3 = fast_create(Product, :product_category_id => pc3.id, :profile_id => @enterprise.id)
+    p4 = fast_create(Product, :product_category_id => pc4.id, :profile_id => @enterprise.id)
 
     get :index, :profile => @enterprise.identifier
 
     assert_equal [pc2, pc1, pc4, pc3], assigns(:categories)
+  end
+
+  should 'use price_detail name instead of production_cost name straight' do
+    p1 = fast_create(Product, :product_category_id => @product_category.id, :enterprise_id => @enterprise.id)
+    p2 = fast_create(Product, :product_category_id => @product_category.id, :enterprise_id => @enterprise.id)
+    Product.any_instance.stubs(:price_described?).returns(true)
+    production_cost = fast_create(ProductionCost)
+    pd1 = PriceDetail.create!(:product => p1, :production_cost => production_cost)
+    pd2 = PriceDetail.create!(:product => p2)
+
+    get :index, :profile => @enterprise.identifier
+
+    assert_tag :tag => 'div', :attributes => {:class => 'search-product-input-name'}, :content => production_cost.name
+    assert_tag :tag => 'div', :attributes => {:class => 'search-product-input-name'}, :content => 'Other costs'
   end
 
 end

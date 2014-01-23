@@ -21,10 +21,44 @@ class Noosfero::Plugin
         enabled_plugins << File.join(Rails.root, 'plugins', 'foo')
       end
 
-      enabled_plugins.select do |entry|
-        File.directory?(entry)
+      enabled_plugins = enabled_plugins.select{ |entry| File.directory? entry  }
+      enabled_plugins_names = enabled_plugins.map{ |d| File.basename d }
+
+      if (deps_unmet = Noosfero::Plugin::DependencyCalc.deps_unmet *enabled_plugins_names).present?
+        STDERR.puts "Plugins's dependencies aren't met, please enable the plugins: #{deps_unmet.to_a.join ', '}"
+        exit 1
+      end
+
+      enabled_plugins.each do |dir|
+        load_plugin_paths dir
       end.each do |dir|
         load_plugin dir
+      end
+    end
+
+    def load_plugin_paths dir
+      # add load paths
+      Rails.configuration.controller_paths << File.join(dir, 'controllers')
+      ActiveSupport::Dependencies.load_paths << File.join(dir, 'controllers')
+      controllers_folders = %w[public profile myprofile admin]
+      controllers_folders.each do |folder|
+        Rails.configuration.controller_paths << File.join(dir, 'controllers', folder)
+        ActiveSupport::Dependencies.load_paths << File.join(dir, 'controllers', folder)
+      end
+      [ ActiveSupport::Dependencies.load_paths, $:].each do |path|
+        path << File.join(dir, 'models')
+        path << File.join(dir, 'lib')
+      end
+
+      # add view path
+      ActionController::Base.view_paths.unshift(File.join(dir, 'views'))
+
+      # load vendor/plugins
+      Dir.glob(File.join(dir, '/vendor/plugins/*')).each do |vendor_plugin|
+        [ ActiveSupport::Dependencies.load_paths, $:].each{ |path| path << "#{vendor_plugin}/lib" }
+      end.each do |vendor_plugin|
+        init = "#{vendor_plugin}/init.rb"
+        require init.gsub(/.rb$/, '') if File.file? init
       end
     end
 
@@ -44,25 +78,8 @@ class Noosfero::Plugin
 
       return unless plugin_dependencies_ok
 
-      # add load paths
-      Rails.configuration.controller_paths << File.join(dir, 'controllers')
-      ActiveSupport::Dependencies.load_paths << File.join(dir, 'controllers')
-      controllers_folders = %w[public profile myprofile admin]
-      controllers_folders.each do |folder|
-        Rails.configuration.controller_paths << File.join(dir, 'controllers', folder)
-        ActiveSupport::Dependencies.load_paths << File.join(dir, 'controllers', folder)
-      end
-      [ ActiveSupport::Dependencies.load_paths, $:].each do |path|
-        path << File.join(dir, 'models')
-        path << File.join(dir, 'lib')
-      end
-
-      # load vendor/plugins
-      Dir.glob(File.join(dir, '/vendor/plugins/*')).each do |vendor_plugin|
-        [ ActiveSupport::Dependencies.load_paths, $:].each{ |path| path << "#{vendor_plugin}/lib" }
-        init = "#{vendor_plugin}/init.rb"
-        require init.gsub(/.rb$/, '') if File.file? init
-      end
+      # load extensions
+      Dir[File.join(dir, 'lib', 'ext', '*.rb')].each {|file| require_dependency file }
 
       # load class
       klass(plugin_name)
@@ -152,6 +169,7 @@ class Noosfero::Plugin
 
   # Here the developer may specify the events to which the plugins can
   # register and must return true or false. The default value must be false.
+  # Must also explicitly define its returning variables.
 
   # -> If true, noosfero will include plugin_dir/public/style.css into
   # application
@@ -159,16 +177,19 @@ class Noosfero::Plugin
     false
   end
 
-  # Here the developer should specify the events to which the plugins can
-  # register to. Must be explicitly defined its returning
-  # variables.
-
   # -> Adds buttons to the control panel
   # returns = { :title => title, :icon => icon, :url => url }
   #   title = name that will be displayed.
   #   icon  = css class name (for customized icons include them in a css file).
   #   url   = url or route to which the button will redirect.
   def control_panel_buttons
+    nil
+  end
+
+  # -> Customize profile block design and behavior
+  # (overwrites profile_image_link function)
+  # returns = lambda block that creates html code.
+  def profile_image_link(profile, size, tag, extra_info)
     nil
   end
 
@@ -191,6 +212,15 @@ class Noosfero::Plugin
   # -> Adds plugin-specific content types to CMS
   # returns  = [ContentClass1, ContentClass2, ...]
   def content_types
+    nil
+  end
+
+  # -> Adds tabs to the products
+  # returns   = { :title => title, :id => id, :content => content }
+  #   title   = name that will be displayed.
+  #   id      = div id.
+  #   content = lambda block that creates html code.
+  def product_tabs product
     nil
   end
 
@@ -307,45 +337,16 @@ class Noosfero::Plugin
     scope
   end
 
-  # This method is called by the CommentHandler background job before sending
-  # the notification email. If the comment is marked as spam (i.e. by calling
-  # <tt>comment.spam!</tt>), then the notification email will *not* be sent.
-  #
-  # example:
-  #
-  #   def check_comment_for_spam(comment)
-  #     if anti_spam_service.is_spam?(comment)
-  #       comment.spam!
-  #     end
-  #   end
-  #
-  def check_comment_for_spam(comment)
+  # -> Allows plugins to check weather object is a spam
+  def check_for_spam(object)
   end
 
-  # This method is called when the user manually marks a comment as SPAM. A
-  # plugin implementing this method should train its spam detection mechanism
-  # by submitting this comment as a confirmed spam.
-  #
-  # example:
-  #
-  #   def comment_marked_as_spam(comment)
-  #     anti_spam_service.train_with_spam(comment)
-  #   end
-  #
-  def comment_marked_as_spam(comment)
+  # -> Allows plugins to know when an object is marked as a spam
+  def marked_as_spam(object)
   end
 
-  # This method is called when the user manually marks a comment a NOT SPAM. A
-  # plugin implementing this method should train its spam detection mechanism
-  # by submitting this coimment as a confirmed ham.
-  #
-  # example:
-  #
-  #   def comment_marked_as_ham(comment)
-  #     anti_spam_service.train_with_ham(comment)
-  #   end
-  #
-  def comment_marked_as_ham(comment)
+  # -> Allows plugins to know when an object is marked as a ham
+  def marked_as_ham(object)
   end
 
   # Adds extra actions for comments
@@ -529,6 +530,8 @@ class Noosfero::Plugin
     #   option = Filter options, like :only or :except
     #   block = Block that the filter will call
     if method.to_s =~ /^(.+)_controller_filters$/
+      []
+    elsif method.to_s == 'application_controller_filters'
       []
     # -> Removes the action button from the content
     # returns = boolean

@@ -1,4 +1,4 @@
-# This file is auto-generated from the current state of the database. Instead of editing this file,
+# This file is auto-generated from the current state of the database. Instead of editing this file, 
 # please use the migrations feature of Active Record to incrementally modify your database, and
 # then regenerate this schema definition.
 #
@@ -9,7 +9,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20130802134445) do
+ActiveRecord::Schema.define(:version => 20131121162641) do
 
   create_table "abuse_reports", :force => true do |t|
     t.integer  "reporter_id"
@@ -89,6 +89,7 @@ ActiveRecord::Schema.define(:version => 20130802134445) do
   end
 
   add_index "article_versions", ["article_id"], :name => "index_article_versions_on_article_id"
+  add_index "article_versions", ["parent_id"], :name => "index_article_versions_on_parent_id"
 
   create_table "articles", :force => true do |t|
     t.string   "name"
@@ -187,7 +188,10 @@ ActiveRecord::Schema.define(:version => 20130802134445) do
     t.integer "image_id"
     t.string  "acronym"
     t.string  "abbreviation"
+    t.text    "ancestry"
   end
+
+  add_index "categories", ["parent_id"], :name => "index_categories_on_parent_id"
 
   create_table "categories_profiles", :id => false, :force => true do |t|
     t.integer "profile_id"
@@ -221,6 +225,7 @@ ActiveRecord::Schema.define(:version => 20130802134445) do
     t.string   "source_type"
     t.string   "user_agent"
     t.string   "referrer"
+    t.integer  "group_id"
   end
 
   add_index "comments", ["source_id", "spam"], :name => "index_comments_on_source_id_and_spam"
@@ -320,6 +325,8 @@ ActiveRecord::Schema.define(:version => 20130802134445) do
     t.boolean "thumbnails_processed", :default => false
   end
 
+  add_index "images", ["parent_id"], :name => "index_images_on_parent_id"
+
   create_table "inputs", :force => true do |t|
     t.integer  "product_id",                                    :null => false
     t.integer  "product_category_id",                           :null => false
@@ -407,7 +414,7 @@ ActiveRecord::Schema.define(:version => 20130802134445) do
   end
 
   create_table "products", :force => true do |t|
-    t.integer  "enterprise_id"
+    t.integer  "profile_id"
     t.integer  "product_category_id"
     t.string   "name"
     t.decimal  "price"
@@ -419,10 +426,12 @@ ActiveRecord::Schema.define(:version => 20130802134445) do
     t.boolean  "highlighted",         :default => false
     t.integer  "unit_id"
     t.integer  "image_id"
+    t.string   "type"
+    t.text     "data"
   end
 
-  add_index "products", ["enterprise_id"], :name => "index_products_on_enterprise_id"
   add_index "products", ["product_category_id"], :name => "index_products_on_product_category_id"
+  add_index "products", ["profile_id"], :name => "index_products_on_enterprise_id"
 
   create_table "profiles", :force => true do |t|
     t.string   "name"
@@ -521,6 +530,16 @@ ActiveRecord::Schema.define(:version => 20130802134445) do
     t.integer  "context_id"
   end
 
+  create_table "sessions", :force => true do |t|
+    t.string   "session_id", :null => false
+    t.text     "data"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "sessions", ["session_id"], :name => "index_sessions_on_session_id"
+  add_index "sessions", ["updated_at"], :name => "index_sessions_on_updated_at"
+
   create_table "taggings", :force => true do |t|
     t.integer  "tag_id"
     t.integer  "taggable_id"
@@ -537,6 +556,8 @@ ActiveRecord::Schema.define(:version => 20130802134445) do
     t.boolean "pending",   :default => false
   end
 
+  add_index "tags", ["parent_id"], :name => "index_tags_on_parent_id"
+
   create_table "tasks", :force => true do |t|
     t.text     "data"
     t.integer  "status"
@@ -548,7 +569,10 @@ ActiveRecord::Schema.define(:version => 20130802134445) do
     t.datetime "created_at"
     t.string   "target_type"
     t.integer  "image_id"
+    t.boolean  "spam",                       :default => false
   end
+
+  add_index "tasks", ["spam"], :name => "index_tasks_on_spam"
 
   create_table "thumbnails", :force => true do |t|
     t.integer "size"
@@ -559,6 +583,8 @@ ActiveRecord::Schema.define(:version => 20130802134445) do
     t.integer "parent_id"
     t.string  "thumbnail"
   end
+
+  add_index "thumbnails", ["parent_id"], :name => "index_thumbnails_on_parent_id"
 
   create_table "units", :force => true do |t|
     t.string  "singular",       :null => false

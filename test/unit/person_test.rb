@@ -211,7 +211,7 @@ class PersonTest < ActiveSupport::TestCase
     p3 = create_user('testuser3').person
     p1.add_friend(p3)
 
-    assert_equal [p2,p3], p1.friends(true) # force reload
+    assert_equivalent [p2,p3], p1.friends(true) # force reload
 
   end
 
@@ -1074,8 +1074,8 @@ class PersonTest < ActiveSupport::TestCase
     person.add_friend(friend_1)
     person.add_friend(friend_2)
     person.add_friend(friend_3)
-    assert_equal [friend_1, friend_2, friend_3], person.friends
-    assert_equal [friend_1], person.friends.online
+    assert_equivalent [friend_1, friend_2, friend_3], person.friends
+    assert_equivalent [friend_1], person.friends.online
   end
 
   should 'return url to a person wall' do
@@ -1335,4 +1335,24 @@ class PersonTest < ActiveSupport::TestCase
     assert_includes non_abusers, not_abuser
   end
 
+  should 'not list leave_scrap_to_self in activities' do
+    person = fast_create(Person)
+    at = ActionTracker::Record.create!(:user => person, :verb => 'leave_scrap_to_self')
+    person.reload
+    assert_equal person.activities, []
+  end
+
+  should 'not list add_member_in_community in activities' do
+    person = fast_create(Person)
+    at = ActionTracker::Record.create!(:user => person, :verb => 'add_member_in_community')
+    person.reload
+    assert_equal person.activities, []
+  end
+
+  should 'not list reply_scrap_on_self in activities' do
+    person = fast_create(Person)
+    at = ActionTracker::Record.create!(:user => person, :verb => 'reply_scrap_on_self')
+    person.reload
+    assert_equal person.activities, []
+  end
 end

@@ -64,7 +64,20 @@ class ContentViewerControllerTest < ActionController::TestCase
     assert_response :missing
   end
 
-  should 'produce a download-like when article is not text/html' do
+  should 'produce a download-link when article is a uploaded file' do
+    profile = create_user('someone').person
+    html = UploadedFile.create! :uploaded_data => fixture_file_upload('/files/500.html', 'text/html'), :profile => profile
+    html.save!
+
+    get :view_page, :profile => 'someone', :page => [ '500.html' ]
+
+    assert_response :success
+    assert_match /^text\/html/, @response.headers['Content-Type']
+    assert @response.headers['Content-Disposition'].present?
+    assert_match /attachment/, @response.headers['Content-Disposition']
+  end
+
+  should 'produce a download-link when article is not text/html' do
 
     # for example, RSS feeds
     profile = create_user('someone').person
@@ -587,6 +600,29 @@ class ContentViewerControllerTest < ActionController::TestCase
     assert_equal 2, assigns(:images).size
   end
 
+  should 'not display private images in the slideshow for unauthorized people' do
+    owner = create_user('owner').person
+    unauthorized = create_user('unauthorized').person
+    folder = Gallery.create!(:name => 'gallery', :profile => owner)
+    image1 = UploadedFile.create!(:profile => owner, :parent => folder, :uploaded_data => fixture_file_upload('/files/other-pic.jpg', 'image/jpg'), :published => false)
+    login_as('unauthorized')
+    get :view_page, :profile => owner.identifier, :page => folder.explode_path, :slideshow => true
+    assert_response :success
+    assert_equal 0, assigns(:images).length
+  end
+
+  should 'not display private images thumbnails for unauthorized people' do
+    owner = create_user('owner').person
+    unauthorized = create_user('unauthorized').person
+    folder = Gallery.create!(:name => 'gallery', :profile => owner)
+    image1 = UploadedFile.create!(:profile => owner, :parent => folder, :uploaded_data => fixture_file_upload('/files/other-pic.jpg', 'image/jpg'), :published => false)
+    login_as('unauthorized')
+    get :view_page, :profile => owner.identifier, :page => folder.explode_path
+    assert_response :success
+    assert_select '.image-gallery-item', 0
+  end   
+  
+
   should 'display default image in the slideshow if thumbnails were not processed' do
     @controller.stubs(:per_page).returns(1)
     folder = Gallery.create!(:name => 'gallery', :profile => profile)
@@ -720,17 +756,25 @@ class ContentViewerControllerTest < ActionController::TestCase
     assert_tag :tag => 'span', :content => '(removed user)', :attributes => {:class => 'comment-user-status icon-user-removed'}
   end
 
-  should 'show only first paragraph of blog posts if visualization_format is short' do
+  should 'show only beginning of blog posts if visualization_format is short' do
+    env = Environment.default
+    env.automatic_abstract_length = 55
+    env.save
+
     login_as(profile.identifier)
 
     blog = Blog.create!(:name => 'A blog test', :profile => profile, :visualization_format => 'short')
 
-    blog.posts << TinyMceArticle.create!(:name => 'first post', :parent => blog, :profile => profile, :body => '<p>Content to be displayed.</p> Anything')
+    blog.posts << TinyMceArticle.create!(:name => 'first post', :parent => blog, :profile => profile, :body => "
+    	<p>The first paragraph of the article.</p>
+	    <p>The second paragraph</p>
+	    <p>The third which <a href=\"link\">is a really biiiiiiig paragraph</a> jds ksajdhf ksdfkjhsdh fakdshf askdjhfsd lfhsdlkfa dslkfah dskjahsd faksdhfk sdfkas fkjshfk sdhjf sdkjf sdkj fkdsjhfal ksdjhflaksjdhdsghfg <br /><img src='http://this_is_an_url/this_is_an_image.png' style='this_is_a_style'>sjhfgsdjhf sdjhgf asdjf sadj fadjhs gfas dkjgf asdjhf asdjh fjkdsg fjsdgf asdjf sadjlgf jsçlkdsjhfdsa lksajsalj aldja lkja slkdjal aj dasldkjas lkjsdj kj sjdlkjsdkfjsl lkjsdkf lk jsdkfjsjflsj kjdlsfjdslfj</p>
+	")
 
     get :view_page, :profile => profile.identifier, :page => blog.explode_path
 
-    assert_tag :tag => 'div', :attributes => { :class => 'short-post'}, :content => /Content to be displayed./
-    assert_no_tag :tag => 'div', :attributes => { :class => 'short-post'}, :content => /Anything/
+    assert_tag :tag => 'img', :attributes => { :class => 'automatic-abstract-thumb', :src => 'http://this_is_an_url/this_is_an_image.png', :style => nil}
+    assert_tag :tag => 'div', :attributes => { :class => 'short-post'}, :content => /The first paragraph of the article\. The second paragraph The third which is a really biiiiiiig paragraph jds ksajdhf ksdfkjhsdh fakdshf askdjhfsd lfhsdlkfa dslkfah dskjahsd faksdhfk sdfkas fkjshfk sdhjf sdkjf sdkj fkdsjhfal ksdjhflaksjdhdsghfg sjhfgsdjhf sdjhgf asdjf sadj fadjhs gfas dkjgf asdjhf asdjh fjkdsg fjsdgf asdjf sadjlgf jsçlkdsjhfdsa lksajsalj aldja lkja slkdjal aj dasldkjas lkjsdj kj \.\.\./
   end
 
   should 'display link to edit blog for allowed' do
@@ -1254,7 +1298,7 @@ class ContentViewerControllerTest < ActionController::TestCase
 
     get 'view_page', :profile => profile.identifier, :page => article.path.split('/')
     assert_tag :tag => 'a', :attributes => { :href => "/#{profile.identifier}/#{article.path}?comment_page=2", :rel => 'next' }
-  end 
+  end
 
   should 'not escape acceptable HTML in list of blog posts' do
     login_as('testinguser')
@@ -1269,6 +1313,12 @@ class ContentViewerControllerTest < ActionController::TestCase
 
     get :view_page, :profile => profile.identifier, :page => [blog.path]
     assert_tag :tag => 'strong', :content => /bold/
+  end
+
+  should 'display link to download of non-recognized file types on its page' do
+    file = UploadedFile.create!(:uploaded_data => fixture_file_upload('/files/test.txt', 'bin/unknown'), :profile => profile)
+    get :view_page, file.url.merge(:view=>:true)
+    assert_match /this is a sample text file/, @response.body
   end
 
 end

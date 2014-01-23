@@ -15,7 +15,11 @@ class Product < ActiveRecord::Base
     'full'
   end
 
-  belongs_to :enterprise
+  belongs_to :enterprise, :foreign_key => :profile_id, :class_name => 'Profile'
+  belongs_to :profile
+  alias_method :enterprise=, :profile=
+  alias_method :enterprise, :profile
+
   has_one :region, :through => :enterprise
   validates_presence_of :enterprise
 
@@ -29,7 +33,10 @@ class Product < ActiveRecord::Base
   has_many :qualifiers, :through => :product_qualifiers
   has_many :certifiers, :through => :product_qualifiers
 
-  validates_uniqueness_of :name, :scope => :enterprise_id, :allow_nil => true
+  acts_as_having_settings :field => :data
+
+  validates_uniqueness_of :name, :scope => :profile_id, :allow_nil => true, :if => :validate_uniqueness_of_column_name?
+
   validates_presence_of :product_category_id
   validates_associated :product_category
 
@@ -78,7 +85,7 @@ class Product < ActiveRecord::Base
   end
 
   def default_image(size='thumb')
-    image ? image.public_filename(size) : '/images/icons-app/product-default-pic-%s.png' % size
+      image ? image.public_filename(size) : '/images/icons-app/product-default-pic-%s.png' % (size || 'big')
   end
 
   def category_full_name
@@ -191,11 +198,13 @@ class Product < ActiveRecord::Base
     (price - total_production_cost.to_f).zero?
   end
 
-  def update_price_details(price_details)
-    self.price_details.destroy_all
-    price_details.each do |price_detail|
-      self.price_details.create(price_detail)
+  def update_price_details(new_price_details)
+    price_details.destroy_all
+    new_price_details.each do |detail|
+      price_details.create(detail)
     end
+    reload # to remove temporary duplicated price_details
+    price_details
   end
 
   def price_description_percentage
@@ -231,5 +240,11 @@ class Product < ActiveRecord::Base
   end
 
   delegate :enabled, :region, :region_id, :environment, :environment_id, :to => :enterprise
+
+  protected
+
+  def validate_uniqueness_of_column_name?
+    true
+  end
 
 end

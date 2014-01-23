@@ -79,7 +79,8 @@ class Environment < ActiveRecord::Base
   end
 
   def remove_admin(user)
-    self.disaffiliate(user, Environment::Roles.admin(self.id))
+    self.disaffiliate user, Environment::Roles.admin(self.id)
+    self.disaffiliate user, Profile::Roles.admin(self.id)
   end
 
   def admins
@@ -96,7 +97,6 @@ class Environment < ActiveRecord::Base
       'disable_asset_communities' => __('Disable search for communities'),
       'disable_asset_products' => _('Disable search for products'),
       'disable_asset_events' => _('Disable search for events'),
-      'disable_products_for_enterprises' => __('Disable products for enterprises'),
       'disable_categories' => _('Disable categories'),
       'disable_header_and_footer' => _('Disable header/footer editing by users'),
       'disable_gender_icon' => _('Disable gender icon'),
@@ -104,9 +104,13 @@ class Environment < ActiveRecord::Base
       'disable_select_city_for_contact' => _('Disable state/city select for contact form'),
       'disable_contact_person' => _('Disable contact for people'),
       'disable_contact_community' => _('Disable contact for groups/communities'),
-      'enterprise_registration' => __('Enterprise registration'),
 
+      'products_for_enterprises' => __('Enable products for enterprises'),
+      'enterprise_registration' => __('Enterprise registration'),
       'enterprise_activation' => __('Enable activation of enterprises'),
+      'enterprises_are_disabled_when_created' => __('Enterprises are disabled when created'),
+      'enterprises_are_validated_when_created' => __('Enterprises are validated when created'),
+
       'media_panel' => _('Media panel in WYSIWYG editor'),
       'select_preferred_domain' => _('Select preferred domains per profile'),
       'use_portal_community' => _('Use the portal as news source for front page'),
@@ -119,15 +123,14 @@ class Environment < ActiveRecord::Base
       'organizations_are_moderated_by_default' => _("Organizations have moderated publication by default"),
       'enable_organization_url_change' => _("Allow organizations to change their URL"),
       'admin_must_approve_new_communities' => _("Admin must approve creation of communities"),
-      'enterprises_are_disabled_when_created' => __('Enterprises are disabled when created'),
-      'enterprises_are_validated_when_created' => __('Enterprises are validated when created'),
       'show_balloon_with_profile_links_when_clicked' => _('Show a balloon with profile links when a profile image is clicked'),
       'xmpp_chat' => _('XMPP/Jabber based chat'),
       'show_zoom_button_on_article_images' => _('Show a zoom link on all article images'),
       'captcha_for_logged_users' => _('Ask captcha when a logged user comments too'),
       'skip_new_user_email_confirmation' => _('Skip e-mail confirmation for new users'),
       'send_welcome_email_to_new_users' => _('Send welcome e-mail to new users'),
-      'allow_change_of_redirection_after_login' => _('Allow users to set the page to redirect after login')
+      'allow_change_of_redirection_after_login' => _('Allow users to set the page to redirect after login'),
+      'display_my_communities_on_user_menu' => _('Display on menu the list of communities the user can manage')
     }
   end
 
@@ -168,7 +171,7 @@ class Environment < ActiveRecord::Base
 
   # One Environment can be reached by many domains
   has_many :domains, :as => :owner
-  has_many :profiles
+  has_many :profiles, :dependent => :destroy
 
   has_many :organizations
   has_many :enterprises
@@ -252,6 +255,9 @@ class Environment < ActiveRecord::Base
   settings_items :currency_separator, :type => String, :default => '.'
   settings_items :currency_delimiter, :type => String, :default => ','
 
+  # Define the default number of words for automatic abstracts (leads) of articles do be shown in blog lists in the 'short' visualization format
+  settings_items :automatic_abstract_length, :type => Integer, :default => 55 #words
+
   settings_items :trusted_sites_for_iframe, :type => Array, :default => %w[
     developer.myspace.com
     itheora.org
@@ -277,20 +283,21 @@ class Environment < ActiveRecord::Base
   settings_items :access_control_allow_origin, :type => Array, :default => []
   settings_items :access_control_allow_methods, :type => String
 
-  # Set to return http forbidden to host not on the allow origin list bellow
-  settings_items :restrict_to_access_control_origins, :default => false
-  # Set this according to http://www.w3.org/TR/cors/. Headers are set at every response
-  # For multiple domains acts as suggested in http://stackoverflow.com/questions/1653308/access-control-allow-origin-multiple-origin-domains
-  settings_items :access_control_allow_origin, :type => Array
-  settings_items :access_control_allow_methods, :type => String
+  # Configuration of the Tinymce Collaborative TextPad plugin. If you don't want to activate the plugin, set padServerUrl as "". For understanding the meanings of the parameters, please look at https://github.com/dtygel/tinymce-etherpadlite-embed/blob/master/README.md
+  # Note 1: The padServerUrl is the url of the pad just before the pad name. Normally it includes a "/p/", as for example: "http://pad.textb.org/p/".
+  # Note 2: Your chosen padServerUrl must be among the "trusted sites" configured by the admin control panel. If not, the embedded iframe will be erased when the article is saved.
+  settings_items :tinymce_plugin_etherpadlite_padServerUrl, :type => String, :default => ""
+  settings_items :tinymce_plugin_etherpadlite_padWidth, :type => String, :default => "100%"
+  settings_items :tinymce_plugin_etherpadlite_padHeight, :type => String, :default => "400px"
 
   def news_amount_by_folder=(amount)
     settings[:news_amount_by_folder] = amount.to_i
   end
 
   # Enables a feature identified by its name
-  def enable(feature)
+  def enable(feature, must_save=true)
     self.settings["#{feature}_enabled".to_sym] = true
+    self.save! if must_save
   end
 
   def enable_plugin(plugin)
@@ -300,8 +307,9 @@ class Environment < ActiveRecord::Base
   end
 
   # Disables a feature identified by its name
-  def disable(feature)
+  def disable(feature, must_save=true)
     self.settings["#{feature}_enabled".to_sym] = false
+    self.save! if must_save
   end
 
   def disable_plugin(plugin)
@@ -345,7 +353,7 @@ class Environment < ActiveRecord::Base
     %w(
       disable_asset_products
       disable_gender_icon
-      disable_products_for_enterprises
+      products_for_enterprises
       disable_select_city_for_contact
       enterprise_registration
       media_panel
@@ -353,7 +361,7 @@ class Environment < ActiveRecord::Base
       show_balloon_with_profile_links_when_clicked
       use_portal_community
     ).each do |feature|
-      enable(feature)
+      enable(feature, false)
     end
   end
 
@@ -703,7 +711,8 @@ class Environment < ActiveRecord::Base
   end
 
   def community_template
-    Community.find_by_id settings[:community_template_id]
+    template = Community.find_by_id settings[:community_template_id]
+    template if template && template.is_template
   end
 
   def community_template=(value)
@@ -711,7 +720,8 @@ class Environment < ActiveRecord::Base
   end
 
   def person_template
-    Person.find_by_id settings[:person_template_id]
+    template = Person.find_by_id settings[:person_template_id]
+    template if template && template.is_template
   end
 
   def person_template=(value)
@@ -719,7 +729,8 @@ class Environment < ActiveRecord::Base
   end
 
   def enterprise_template
-    Enterprise.find_by_id settings[:enterprise_template_id]
+    template = Enterprise.find_by_id settings[:enterprise_template_id]
+    template if template && template.is_template
   end
 
   def enterprise_template=(value)
@@ -727,7 +738,8 @@ class Environment < ActiveRecord::Base
   end
 
   def inactive_enterprise_template
-    Enterprise.find_by_id settings[:inactive_enterprise_template_id]
+    template = Enterprise.find_by_id settings[:inactive_enterprise_template_id]
+    template if template && template.is_template
   end
 
   def inactive_enterprise_template=(value)
@@ -796,13 +808,6 @@ class Environment < ActiveRecord::Base
     self.save!
   end
 
-  after_destroy :destroy_templates
-  def destroy_templates
-    [enterprise_template, inactive_enterprise_template, community_template, person_template].compact.each do |template|
-      template.destroy
-    end
-  end
-
   after_create :create_default_licenses
   def create_default_licenses
     License.create!(:name => 'CC (by)', :url => 'http://creativecommons.org/licenses/by/3.0/legalcode', :environment => self)
@@ -816,7 +821,7 @@ class Environment < ActiveRecord::Base
   end
 
   def highlighted_products_with_image(options = {})
-    Product.find(:all, {:conditions => {:highlighted => true, :enterprise_id => self.enterprises.find(:all, :select => :id) }, :joins => :image}.merge(options))
+    Product.find(:all, {:conditions => {:highlighted => true, :profile_id => self.enterprises.find(:all, :select => :id) }, :joins => :image}.merge(options))
   end
 
   settings_items :home_cache_in_minutes, :type => :integer, :default => 5

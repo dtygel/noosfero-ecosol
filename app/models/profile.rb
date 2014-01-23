@@ -227,12 +227,14 @@ class Profile < ActiveRecord::Base
 
   belongs_to :region
 
+  LOCATION_FIELDS = %w[address district city state country_name zip_code]
+
   def location(separator = ' - ')
     myregion = self.region
     if myregion
       myregion.hierarchy.reverse.first(2).map(&:name).join(separator)
     else
-      %w[address district city state country_name zip_code ].map {|item| (self.respond_to?(item) && !self.send(item).blank?) ? self.send(item) : nil }.compact.join(separator)
+      LOCATION_FIELDS.map {|item| (self.respond_to?(item) && !self.send(item).blank?) ? self.send(item) : nil }.compact.join(separator)
     end
   end
 
@@ -502,7 +504,8 @@ class Profile < ActiveRecord::Base
   end
 
   def url_options
-    options = { :host => default_hostname, :profile => (own_hostname ? nil : self.identifier)}
+    options = { :host => default_hostname }
+    options[:profile] = self.identifier unless self.own_hostname
     options[:protocol] = self.default_protocol if self.default_protocol and self.default_protocol != 'http'
     options.merge(Noosfero.url_options)
   end
@@ -847,8 +850,10 @@ private :generate_url, :url_options
     }[amount] || _("%s members") % amount
   end
 
-  def profile_custom_icon
-    self.image.public_filename(:icon) unless self.image.blank?
+  include Noosfero::Gravatar
+
+  def profile_custom_icon(gravatar_default=nil)
+    image.public_filename(:icon) if image.present?
   end
 
   def jid(options = {})
@@ -885,6 +890,21 @@ private :generate_url, :url_options
   # Override in your subclasses
   def activities
     []
+  end
+
+  def may_display_field_to? field, user = nil
+    if not self.active_fields.include? field.to_s
+      self.send "may_display_#{field}_to?", user rescue true
+    else
+      not (!self.public_fields.include? field.to_s and (!user or (user != self and !user.is_a_friend?(self))))
+    end
+  end
+
+  def may_display_location_to? user = nil
+    LOCATION_FIELDS.each do |field|
+      return false if !self.may_display_field_to? field, user
+    end
+    return true
   end
 
   # field => privacy (e.g.: "address" => "public")

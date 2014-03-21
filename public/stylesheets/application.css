@@ -1,3 +1,11 @@
+/* browser fixes */
+
+img:-moz-broken {
+  -moz-force-broken-image-icon:1;
+}
+
+/* general styles */
+
 body {
   padding: 0px;
   margin: 0px;
@@ -216,9 +224,7 @@ th {
   font-weight: bold;
   border-bottom: 2px solid black;
 }
-td {
-  border-bottom: 1px solid #e0e0e0;
-}
+
 tr:hover td {
   background-color: #f0f0f0;
 }
@@ -301,24 +307,29 @@ div.pending-tasks {
 }
 /* sitemap and agenda */
 
+
 .agenda-item a.icon, .sitemap-item a.icon {
-  background-repeat: no-repeat;
-  padding-left: 20px;
+  background-image: none;
+  line-height: 150%;
 }
 .agenda-item .icon:hover, .sitemap-item .icon:hover {
   background-color: transparent;
+  text-decoration: underline;
 }
-.sitemap-item a:link, .agenda-item a:link, .sitemap-item a:visited, .agenda-item a:visited {
+.agenda-item a, a:visited{
+ font-weight: bold;
+ color: black;
+}
+
+.sitemap-item a:link, .agenda-item a:link, .sitemap-item a:visited, .agenda-item a:visited, .agenda a:hover {
   border: none;
   text-decoration: none;
 }
+
 .sitemap-item img, .agenda-item img {
   border: none;
 }
-.sitemap-item a:hover, .agenda-item a:hover {
-  color: red;
-  text-decoration: underline;
-}
+
 .last-update {
   font-size: 12px;
 }
@@ -382,7 +393,7 @@ div.pending-tasks {
   font-size: 11px;
 }
 #category-ajax-selector .select-subcategory-link:hover {
-  background-color: #FFA;
+  background-color: black;
 }
 #category-ajax-selector .button {
   display: block;
@@ -932,6 +943,18 @@ code input {
 #article-actions a{
   white-space: nowrap;
 }
+
+#article-header .blog-cover {
+  overflow: hidden;
+  display: block;
+  width: 100%;
+  max-height: 170px;
+}
+
+#article-header .blog-cover img{
+  width: 100%;
+}
+
 #article-tags {
   font-size: 10px;
   text-align: right;
@@ -1659,23 +1682,23 @@ a.button.disabled, input.disabled {
  ************************************************/
 
 .block-target {
-  margin: 5px;
-  height: 2px;
-  height: 15px;
-  border: 1px dashed #e0e0e0;
+  padding: 2px;
+  background: #ffd;
+  margin-bottom: 5px;
+  opacity: 0.8;
+  filter: alpha(opacity=80);
 }
 .block-target-hover {
   background: #ffd;
-  border: 1px solid red;
+  border: 1px solid #000;
   height: 30px;
+  box-shadow: 0 0 15px #888 inset;
 }
 /*************************************************************
  * put borders around boxes and blocks when organizing boxes *
  *************************************************************/
 
 #box-organizer div.box {
-  border: 1px solid #ccc;
-  background-color: white;
   background-repeat: no-repeat;
   background-position: top right;
 }
@@ -1688,28 +1711,72 @@ a.button.disabled, input.disabled {
 #box-organizer div.box-3 {
   background-image: url(../images/blocks/3.png);
 }
-#box-organizer div.box-1 .block {
-  outline: 2px dashed green;
+#box-organizer .block {
+  cursor: move;
 }
+#box-organizer .block:hover {
+    box-shadow: 0px 0px 0px 2px #FFF,
+                0px 0px 0px 2px #FFF,
+                0px 0px 10px rgba(0, 0, 0, 0.6);
+    outline: none;
+}
+#box-organizer .block {
+  cursor: move;
+  position: relative;
+  min-height: 20px;
+}
+
+#box-organizer .block .button-bar {
+  cursor: move;
+  position: absolute;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  top: -40px;
+  padding-bottom: 40px;
+  display: none;
+}
+
+#box-organizer .block-outer:focus .button-bar,
+#box-organizer .block-outer:hover .button-bar {
+  display: block;
+}
+
 .msie #box-organizer div.box-1 .block {
   border: 2px dashed green;
-}
-#box-organizer div.box-2 .block {
-  outline: 2px dashed red;
 }
 .msie #box-organizer div.box-1 .block {
   border: 2px dashed red;
 }
-#box-organizer div.box-3 .block {
-  outline: 2px dashed blue;
-}
 .msie #box-organizer div.box-1 .block {
   border: 2px dashed blue;
 }
-.block-footer-content {
-  clear: both;
-  margin-top: 1em;
+/************************************************************
+ * custom interation blocks on drag n drop                  *
+ ***********************************************************/
+#box-organizer .main-block {
+  font-size: 24px;
   text-align: center;
+  box-shadow: none;
+  outline: none;
+  display: block;
+  height: 150px;
+  line-height: 120px;
+}
+#box-organizer .main-block:hover {
+    border: 0px;
+    border-style: none;
+    box-shadow: none;
+    outline: none;
+}
+/* FIX Error show option buttons on blocks */
+#box-organizer .block {
+  overflow: visible !important;
+}
+
+#box-organizer .blog-post {
+  margin: auto;
 }
 
 /****************************************
@@ -1836,7 +1903,6 @@ a.button.disabled, input.disabled {
   background-color: #555;
 }
 /* ==> blocks/profile-list-block.css <<= */
-
 
 #content .profile-list-block h3 {
   text-align: center;
@@ -3113,7 +3179,7 @@ table.cms-articles a.icon {
   text-overflow: ellipsis;
 }
 
-table.cms-articles a.icon, table.cms-articles a.icon-parent-folder {
+table.cms-articles a.icon, table.cms-articles a.icon-parent-folder, .cms-homepage a.icon {
   padding: 0px 0px 3px 20px;
   background-repeat: no-repeat;
 }
@@ -3130,6 +3196,14 @@ table.cms-articles .icon:hover {
 
 #content table.cms-articles .button:last-child {
   border-right: 1px solid #ccc;
+}
+
+.cms-homepage a.icon {
+  border: none;
+}
+
+.cms-homepage a:hover {
+  background-color: transparent;
 }
 
 .select-article-type {
@@ -3248,6 +3322,9 @@ table.cms-articles .icon:hover {
 div.with_media_panel .formfield input {
   width: 100%;
 }
+div.with_media_panel .formfield input[type="checkbox"] {
+  width: auto;
+}
 
 .text-editor-sidebar {
   position: absolute;
@@ -3357,6 +3434,16 @@ div.with_media_panel .formfield input {
   text-align: center;
   clear: both;
 }
+.pagination.infinite-scroll a,
+.pagination.infinite-scroll span {
+  display: none;
+}
+.pagination.infinite-scroll .loading {
+  background-position: 45% 0;
+  background-size: 20px;
+  padding-left: 20px;
+}
+
 .pagination .disabled {
   color: #888;
 }
@@ -3482,18 +3569,19 @@ div#article-parent a.button{
   width: 50%;
 }
 #agenda td, #agenda th {
-  padding: 0px;
+  padding: 15px;
+  padding-right: 0px;
 }
 #agenda .agenda-calendar .previous-month td, #agenda .agenda-calendar .previous-month th, #agenda .agenda-calendar .next-month td, #agenda .agenda-calendar .next-month th {
-  font-size: 10px;
-  color: gray;
+  font-size: 12px;
+  color: black;
 }
 #agenda .agenda-calendar .current-month td {
 }
 #agenda .agenda-calendar .calendar-day {
 }
 #agenda .agenda-calendar .calendar-day-out {
-  color: gray;
+  color: black;
 }
 #agenda .agenda-calendar .calendar-day-out span {
   display: none;
@@ -3510,7 +3598,7 @@ div#article-parent a.button{
 }
 #agenda .agenda-calendar .current-month {
   height: 250px;
-  border-bottom: 1px solid #BFC2BC;
+  border-bottom: 1px solid black;
 }
 #agenda .agenda-calendar .previous-month, #agenda .agenda-calendar .next-month {
   float: left;
@@ -3547,14 +3635,15 @@ div#article-parent a.button{
   width: 45%;
   top: 0px;
   height: 100%;
-  border-left: 1px solid #BFC2BC;
   padding-left: 20px;
 }
 #agenda #events-of-the-day #agenda-items {
   display: block;
   overflow: auto;
   overflow-x: hidden;
-  height: 90%;
+  height: 80%;
+  background: white;
+  border: none;
 }
 #agenda-toolbar {
   float: right;
@@ -3563,6 +3652,11 @@ div#article-parent a.button{
 }
 h1#agenda-title {
   position: relative;
+}
+#agenda .agenda-calendar .button.icon-next.with-text {
+  background-position: right;
+  padding-left: 3px;
+  padding-right: 20px;
 }
 #agenda-toolbar a.button {
   border: none;
@@ -4147,6 +4241,41 @@ h1#agenda-title {
   -webkit-border-radius:10px;
 }
 
+/* ==> public/stylesheets/controller_environment_users.css <== */
+.controller-users td.actions {
+  text-align: center;
+}
+
+.controller-users .search-field #q {
+  width: 85%;
+}
+
+.controller-users .search-field input[type='submit'] {
+  float: right;
+}
+
+#environment-users-search form {
+  padding: 10px;
+  margin-bottom: 15px;
+  background-color: #E6E6E6;
+  -moz-border-radius: 5px;
+  -webkit-border-radius: 5px;
+}
+
+.environment-users-results-header {
+  font-size: 0.9em;
+  padding: 6px 0px 0px 0px;
+  margin:0 0 5px 0;
+  border-bottom: 2px dotted #999;
+  text-align: right;
+}
+#environment-users-filter-title {
+  font-weight: bold;
+  font-size: 130%;
+  line-height: 35px;
+  float: left;
+}
+
 /* * * Profile search * * * * * * * */
 
 #public-profile-search, #profile-search-results form, .profile-search-block form {
@@ -4407,6 +4536,14 @@ h1#agenda-title {
 .controller-themes .msie6 #css-code textarea {
   width: 500px;
 }
+
+.controller-themes #themes-private-edit form {
+  float: left;
+}
+.controller-themes #themes-private-edit #image-files-list {
+  float: left;
+}
+
 /* highlights block stuff */
 
 .highlights-block {
@@ -5696,6 +5833,10 @@ li.profile-activity-item.upload_image .activity-gallery-images-count-1 img {
   padding-left: 20px;
 }
 
+.view-more-comments, .view-more-replies {
+  text-align: center;
+}
+
 /* Profile activity relative dimensions */
 
 #leave_scrap {
@@ -5854,6 +5995,10 @@ li.profile-activity-item.upload_image .activity-gallery-images-count-1 img {
 }
 
 /* Captcha */
+
+.hcaptcha {
+  display: none;
+}
 
 /* Signup interface {{{ */
 
@@ -6382,3 +6527,11 @@ li.profile-activity-item.upload_image .activity-gallery-images-count-1 img {
   width: 100px;
   text-align: center;
 }
+
+#product-list .highlighted img.star {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 1;
+}
+

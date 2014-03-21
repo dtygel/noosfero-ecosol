@@ -4,15 +4,15 @@ require_dependency 'product'
 class Product
 
   named_scope :available, :conditions => {:available => true}
-  named_scope :unavailable, :conditions => {:available => false}
+  named_scope :unavailable, :conditions => ['products.available <> true']
   named_scope :archived, :conditions => {:archived => true}
-  named_scope :unarchived, :conditions => {:archived => false}
+  named_scope :unarchived, :conditions => ['products.archived <> true']
 
   named_scope :with_available, lambda { |available| { :conditions => {:available => available} } }
   named_scope :with_price, :conditions => 'products.price > 0'
   named_scope :with_product_category_id, lambda { |id| { :conditions => {:product_category_id => id} } }
 
-  # FIXME: transliterate input and on db
+  # FIXME: transliterate input and name column
   named_scope :name_like, lambda { |name| { :conditions => ["LOWER(products.name) LIKE ?", "%#{name}%"] } }
 
   named_scope :by_profile, lambda { |profile| { :conditions => {:profile_id => profile.id} } }
@@ -46,12 +46,7 @@ class Product
   named_scope :distributed, :conditions => ["products.type = 'SuppliersPlugin::DistributedProduct'"]
   named_scope :own, :conditions => ["products.type = 'Product'"]
 
-  named_scope :from_supplier_profile_id, lambda { |profile_id| {
-      :conditions => ['suppliers_plugin_suppliers.profile_id = ?', profile_id],
-      :joins => 'INNER JOIN suppliers_plugin_suppliers ON suppliers_plugin_suppliers.profile_id = suppliers_plugin_source_products.supplier_id'
-    }
-  }
-  named_scope :from_supplier_id, lambda { |supplier_id| { :conditions => ['suppliers_plugin_source_products.supplier_id = ?', supplier_id] } }
+  named_scope :from_supplier_id, lambda { |supplier_id| { :conditions => ['sources_from_products_products.supplier_id = ?', supplier_id] } }
 
   extend CurrencyHelper::ClassMethods
   has_currency :price

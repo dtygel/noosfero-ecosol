@@ -141,20 +141,20 @@
         one:   "1 minute"
         other: "%{count} minutes"
       about_x_hours:
-        one:   "about 1 hour"
-        other: "about %{count} hours"
+        one:   "1 hour"
+        other: "%{count} hours"
       x_days:
         one:   "1 day"
         other: "%{count} days"
       about_x_months:
-        one:   "about 1 month"
-        other: "about %{count} months"
+        one:   "1 month"
+        other: "%{count} months"
       x_months:
         one:   "1 month"
         other: "%{count} months"
       about_x_years:
-        one:   "about 1 year"
-        other: "about %{count} years"
+        one:   "1 year"
+        other: "%{count} years"
       over_x_years:
         one:   "over 1 year"
         other: "over %{count} years"
@@ -229,8 +229,8 @@
         name: "Suppliers"
         description: "Suppliers and its distributed products registry"
         distribution_tab: "Distribuição"
-    terms:
-      profile:
+    terms: &suppliers_terms
+      profile: &suppliers_term_profile
         singular: "organization"
         plural: "organizations"
         it: 
@@ -247,6 +247,12 @@
           singular: "from an organization"
         from_article:
           singular: "from the organization"
+        from_which_article: 
+          singular: "from which the organização"
+        on_your:
+          singular: "on your organização"
+        this:
+          singular: "this organization"
         with_which:
           singular: "with which the organization"
         undefined_article:
@@ -256,6 +262,7 @@
           plural: "the organizations"
         by_article: 
           singular: "by the organization"
+      consumer: *suppliers_term_profile
       supplier:
         singular: "supplier"
         plural: "suppliers"
@@ -274,12 +281,14 @@
           plural: "to the suppliers"
         from_article: 
           singular: "from supplier"
+        from_which_article: 
+          singular: "from which the supplier"
         undefined_article:
           singular: "a supplier"
         none: 
           singular: "any supplier"
-        from_which_article: 
-          singular: "from which the supplier"
+        this:
+          singular: "this supplier"
         article: 
           singular: "the supplier"
           plural: "the suppliers"
@@ -383,7 +392,8 @@
           with_the_qualifiers: "with the qualifiers"
       supplier: 
         _new:
-          title: "Find %{terms.supplier.undefined_article.singular} to add"
+          title: "Add %{terms.supplier.singular} to %{profile}"
+          intro_help: "Begin to type the name %{terms.supplier.from_article.singular} that you wnat to add. We'll look if %{terms.supplier.article.singular} already exists at %{environment}. In case it doesn't exists, you'll be able to createa type of enterprise that will be visible ONLY %{terms.profile.on_your.singular}, and not at the %{environment}. If %{terms.supplier.this.singular} really wants to join the %{environment}, then it should send a message to %{contact_email} making the order."
           query_placeholder: "find %{terms.supplier.undefined_article.singular}"
           search: "Search"
           none_found: "%{terms.supplier.none.singular} found. Please revise the search text."
@@ -391,7 +401,7 @@
           suggest_creation: "Haven't found %{terms.supplier.article.singular} you were searching?. You can create a new %{terms.supplier.new_undefined_article.singular} managed by the %{terms.profile.by_article.singular}."
           create_dummy: "Create %{terms.supplier.singular}"
         _edit: 
-          registry_help: "The registry %{terms.supplier.from.singular} will be managed by the %{terms.profile.by_own.singular} itself and will be private %{terms.profile.to_it.singular}."
+          registry_help: "The registry %{terms.supplier.from_article.singular} will be managed by the %{terms.profile.by_article.singular} itself and will be private %{terms.profile.to_it.singular}."
           abbreviated_name: "Abbreviated name"
           add_supplier_managed_: "Add %{terms.supplier.singular} managed %{terms.profile.by_article.singular}"
           additional_fields: "Additional fields"
@@ -408,7 +418,6 @@
         _supplier: 
           abreviated_name: "Abreviated Name"
           actions: Actions
-          add_products: "add products"
           among_them: ", among them"
           any_registered_produc: "any registered product"
           by_removing_this_supp: "By removing %{terms.supplier.article.singular} all its products won't be available for future cycles. Please confirm you choice"
@@ -417,7 +426,7 @@
           edit: edit
           products_are_active: " produtos estão ativos"
           products_distributed: " distributed products %{terms.profile.by_article.singular}"
-          products: products
+          products: "manage products"
           registered_supplier_i: "Registered %{terms.supplier.singular} in the network"
           remove: remove
           supplier_profile_product: " registered products"
@@ -450,7 +459,7 @@
           add: Add
           cancel: cancel
           instructions: Instructions
-          instructions_help: "Give the member instruction for the delivery, include the address and any recommendations you find useful. This text will be available on the page of the order, and by confirming the order the person will receive a copy of the order."
+          instructions_help: "Give the consumer instructions for the delivery, include the address and any recommendations you find useful. This text will be available on the page of the order, and by confirming the order the person will receive a copy of the order."
           name: Name
           save: Save
         _select_content: 
@@ -467,10 +476,22 @@
           add_a_delivery_method: "Add a delivery method to the Orders' Cycle"
 
   orders_plugin:
+    terms:
+      <<: *suppliers_terms
+      purchase:
+        singular: "Purchase"
+        plural: "Purchases"
+      sale:
+        singular: "Sale"
+        plural: "Sales"
     lib:
       plugin:
         name: "Orders"
-        description: "Orders management"
+        description: "Orders' management"
+        panel_button: "Purchases and Sales"
+      ext:
+        profile:
+          orders_manager: "Orders' Manager"
       mailer:
         order_was_confirmed: "[%{name}] Your order was confirmmed"
         order_was_cancelled: "[%{name}] Your order was cancelled"
@@ -483,9 +504,9 @@
         m_d: "%m/%d"
         m_d_hh: "%-m/%-d %Hh"
         m_d_hh_m: "%m/%d %Hh%M"
-        m_d_y_at_hh_m: "%m/%d/%y at %Hh%M"
-        m_d_y_hh_m: "%m/%d/%y %Hh%M"
-        m_y_hh_m: "%m/%y - %Hh%M"
+        m_d_y_at_hh_m: "%m/%d/%Y at %Hh%M"
+        m_d_y_hh_m: "%m/%d/%Y %Hh%M"
+        m_y_hh_m: "%m/%Y - %Hh%M"
         start_day_from_start_: "%{start_day}, from %{start_time} to %{finish_time}"
         start_day_start_datet: "%{start_day}, %{start_datetime} - %{finish_day}, %{finish_datetime}"
         start_finish: "%{start} - %{finish}"
@@ -506,35 +527,43 @@
           you_are_not_the_owner: "You are not the owner of this order"
     models:
       order: 
-        order_cancelled: "Order cancelled"
-        order_confirmed: "Order confirmed"
-        order_in_progress: "Order in progress"
-        order_not_confirmed: "Order not confirmed"
-        order_planned: "Order planned"
+        open: "Open"
+        not_confirmed: "Not confirmed"
+        planned: "Planned"
+        confirmed: "Confirmed"
+        cancelled: "Cancelled"
+        accepted: "Accepted"
+        shipped: "Shipped"
     views:
       consumer:
         _total: 
           total: Total
-      product: 
+      item: 
         _edit: 
           remove_from_order: "remove from order"
           submit: 'OK'
           this_product_requires: "This product requires a minimum of %{value}. The minimum was kept."
         _index: 
+          header: "Purchase %{profile.code} - %{profile} / Sale - %{consumer}"
+          header_for_self_supplier: "Code: %{profile_code} / Consumer - %{consumer}"
+          empty_order: "Empty order"
           supplier: "%{terms.supplier.singular}"
           product: "product"
           quantity: "qty"
           price_total: "value (%{currency})"
-          empty_order: "Empty order"
+          status_updated: "status w/ update"
       admin:
         index: 
-          code: Code
-          created: Created
-          member: Member
-          modified: Modified
-          no_orders_to_show: "No orders to show"
-          prod_qty: "Prod. Qty."
-          value: Value
+          no_orders_to_show: "No orders to show."
+          code: "Code"
+          consumer: "Consumer"
+          last_update: "Last update"
+          order_date: "Orders' date"
+          total: "Total (%{currency})"
+        _filter:
+          status: "Situação"
+          code: "Código"
+          all: "Todos"
         _edit: 
           actions: Actions
           add_product: "add product"
@@ -542,13 +571,13 @@
           edit_on_the_order_pag: "edit on the order page"
           empty_order: "Empty order"
           include_message: "Include message"
-          message_to_member: "message to member"
+          message_to_member: "message to the consumer"
           remove_order: "remove order"
           save: Save
           see_delivery: "see delivery"
           see_redistribution: "see redistribution"
-          the_collective_member: "The member %{terms.profile.from.singular} will receive an email that discriminates all changes made in his/her order"
-          warn_member_of_the_ch: "Warn member of the changes in his/her order"
+          the_collective_member: "The consumer %{terms.profile.from_article.singular} will receive an email that discriminates all changes made in his/her order"
+          warn_member_of_the_ch: "Warn consumer of the changes in his/her order"
 
       mailer:
         order_confirmation: 
@@ -576,10 +605,12 @@
           total: "TOTAL:"
 
   orders_cycle_plugin: 
+    terms: 
+      <<: *suppliers_terms
     lib:
       plugin:
-        name: Ciclo de pedidos
-        description: "Crie e gerencie ciclos de pedidos"
+        name: "Orders' Cycle"
+        description: "Create and manage orders' cycle"
       ext:
         orders_plugin:
           order:
@@ -588,13 +619,13 @@
         profile_subject: "[%{profile}] %{subject}"
         order_was_changed: "[%{profile}] Your order was modificado"
       order_block: 
-        distribution_orders_c: "Distribution orders' cycles for members"
-        offer_cycles_for_you_: "Offer cycles for you members to make orders"
+        distribution_orders_c: "Distribution orders' cycles for consumers"
+        offer_cycles_for_you_: "Offer cycles for you consumers to make orders"
         orders_cycles: "Orders' cycles"
       report: 
         closed_orders: "Closed Orders"
         created: created
-        member_name: "Member name"
+        member_name: "Consumer name"
         min_stock: "min. stock"
         mm_dd_yy_hh_mm_am_pm: "MM/DD/YY HH:MM AM/PM"
         modified: modified
@@ -650,7 +681,7 @@
         message_to_admins: 
           a_service_of_s: "A service of %s."
           hello_managers_of_nam: "Hello managers of %{name},"
-          the_member_member_sen: "The member %{member} sent a messsage to you"
+          the_member_member_sen: "The consumer %{member} sent a messsage to you"
         message_to_consumer: 
           a_service_of_s: "A service of %s."
           hello_name: "Hello %{name},"
@@ -668,7 +699,7 @@
           the_collective_profile_s: "%{terms.profile.article.singular.capitalize} %{profile} sent a messsage to you"
         open_cycle: 
           a_new_cycle_is_open_c: "A new cycle is open called "
-          hello_member_of_name: "Hello member of %{name},"
+          hello_member_of_name: "Hello consumer of %{name},"
           the_administrator_let: "The administrator let a message about this cycle"
           the_cycle_description: "The cycle description is.."
         order_change_notification: 
@@ -689,12 +720,12 @@
           send: Send
         new_to_consumer: 
           cancel: cancel
-          message_to_member_con: "Message to member \"%{consumer}\""
+          message_to_member_con: "Message to consumer \"%{consumer}\""
           send: Send
         new_to_consumer_for_order: 
           cancel: cancel
           include_reference_to_: "Include reference to the order made"
-          message_to_member_con: "Message to member \"%{consumer}\""
+          message_to_member_con: "Message to consumer \"%{consumer}\""
           send: Send
         new_to_supplier: 
           cancel: cancel
@@ -708,11 +739,11 @@
           hide_cancelled_orders: "hide cancelled orders"
           administration_of_thi: "Administration of this cycle"
           before_the_closing: "(before the closing)"
-          change_order: "change order"
+          change_order: "reopen order"
           edit_your_orders: "Edit your orders"
           login: login
           new_order: "New order"
-          orders_from_another_m: "Orders from another member"
+          orders_from_another_m: "Orders from another consumer"
           orders_from_consumer_: "Orders from \"%{consumer}\" on this cycle"
           send_message_to_the_m: "send message to the managers"
           sign_up: "sign up"
@@ -776,7 +807,7 @@
           product: Product
           this_search_hasn_t_re: "This search hasn't returned any product"
         _cycle_edit: 
-          all_ordered_products_: "All ordered products from this product will also be removed; you should first warn members that ordered this products"
+          all_ordered_products: "All ordered products from this product will also be removed; you should first warn consumers that ordered this products"
           buy_price: "Buy price"
           buy_unit: "Buy unit"
           cancel_updates: "cancel updates"
@@ -812,7 +843,7 @@
           description: Description
           general_settings: "General settings"
           name: Name
-          notify_members_of_ope: "Notify members of open orders"
+          notify_members_of_ope: "Notify consumer of open orders"
           opening_message: "Opening Message"
           orders_interval: "Orders Interval"
           save: Save
@@ -854,7 +885,8 @@
           no_cycles_to_show: "No cycles to show"
         _timeline: 
           actions: Actions
-          are_you_sure_you_want: "Are you sure you want to reopen the orders cycle?"
+          are_you_sure_you_want_to_reopen: "Are you sure you want to reopen the orders cycle?"
+          are_you_sure_you_want_to_close: "Are you sure you want to close the orders cycle?"
           block_orders_period: "Block orders period"
           call: Call
           close: Close
@@ -914,7 +946,8 @@
         start: Start
         administration: Administration
     terms:
-      profile:
+      <<: *suppliers_terms
+      profile: &consumers_coop_term_profile
         singular: "consumers' coop"
         plural: "consumers' coop"
         it: 
@@ -931,6 +964,12 @@
           singular: "from a consumers' coop"
         from_article:
           singular: "from the consumers' coop"
+        from_which_article: 
+          singular: "from which the consumers' coop"
+        on_your:
+          singular: "on your consumers' coop"
+        this:
+          singular: "this consumers' coop"
         with_which:
           singular: "with which the consumers' coop"
         undefined_article:
@@ -940,6 +979,7 @@
           plural: "the consumers' coops"
         by_article: 
           singular: "by the consumers' coop"
+      consumer: *consumers_coop_term_profile
     controllers:
       myprofile:
         distribution_settings: "Distribution settings saved."
@@ -949,7 +989,7 @@
     views:
       layouts: 
         _admin_submenu: 
-          members: Members
+          members: Consumers
           orders_cycles: "Orders' Cycles"
           parcels: Parcels
           products: Products
@@ -985,7 +1025,8 @@
         name: Networks
         description: "Create and manage networks."
     terms:
-      profile:
+      <<: *suppliers_terms
+      profile: &networks_term_profile
         singular: "network"
         plural: "networks"
         it: 
@@ -1002,6 +1043,12 @@
           singular: "from a network"
         from_article:
           singular: "from the network"
+        from_which_article: 
+          singular: "from which the rede"
+        this:
+          singular: "this network"
+        on_your:
+          singular: "on your network"
         with_which:
           singular: "with which the network"
         undefined_article:
@@ -1011,6 +1058,7 @@
           plural: "the networks"
         by_article: 
           singular: "by the network"
+      consumer: *networks_term_profile
       supplier: 
         singular: "enterprise"
         plural: "enterprises"
@@ -1029,12 +1077,14 @@
           plural: "to the enterprises"
         from_article: 
           singular: "from enterprise"
+        from_which_article: 
+          singular: "from which the enterprise"
         undefined_article:
           singular: "a enterprise"
         none: 
           singular: "any enterprise"
-        from_which_article: 
-          singular: "from which the enterprise"
+        this:
+          singular: "this enterprise"
         article: 
           singular: "the enterprise"
           plural: "the enterprises"
@@ -1050,7 +1100,12 @@
         edit: "Node settings saved"
     views:
       control_panel:
-        manage_control_panel_button: "Manage network's structure"
+        structure: "Manage network's structure"
+      blocks:
+        profile_info_actions:
+          button: "My enterprise participate on this network"
+        location:
+          title: "Map of Enterprises from %{profile}"
       admin:
         index:
           title: "Manage networks"
@@ -1081,6 +1136,11 @@
           back: "Back to network's structure"
           node_info: "Node's informations"
           presentation_text: "Presentation's text:"
+          orders_management: "Orders' management"
+        _orders_management:
+          forward_explanation: "When an order is confirmed through the shopping basket, an email with the order's details and the instructions of how to proceed is sent to the final user (buyer), to the administrators %{terms.supplier.from_article.plural} and to the administrators %{terms.profile.from_article.singular}. You can assign representatives of this node so that they can receive the orders of your products in place of %{terms.profile.from_article.singular}."
+          network_forward: "send the orders %{terms.profile.to_article.singular}"
+          managers_forward: "send the orders to the representatives:"
       enterprise:
         edit:
           title: "Settings of the enterprise %{enterprise}"

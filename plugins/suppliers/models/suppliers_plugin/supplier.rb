@@ -31,13 +31,13 @@ class SuppliersPlugin::Supplier < Noosfero::Plugin::ActiveRecord
 
   after_create :add_admins, :if => :dummy?
   after_create :save_profile, :if => :dummy?
-  after_create :distribute_products_to_consumers
+  after_create :distribute_products_to_consumer
 
   attr_accessor :dont_destroy_dummy
 
   def self.new_dummy attributes
-    profile = Enterprise.new :visible => false, :identifier => Digest::MD5.hexdigest(rand.to_s),
-      :environment => attributes[:consumer].environment
+    profile = Enterprise.new :enabled => false, :visible => false, :public_profile => false,
+      :identifier => Digest::MD5.hexdigest(rand.to_s), :environment => attributes[:consumer].environment
     supplier = self.new :profile => profile
     supplier.attributes = attributes
     supplier
@@ -66,14 +66,14 @@ class SuppliersPlugin::Supplier < Noosfero::Plugin::ActiveRecord
   end
   def name= value
     self['name'] = value
-    self.supplier.name = value if dummy?
+    self.supplier.name = value if self.dummy? and not self.supplier.frozen?
   end
   def description
     self.attributes['description'] || self.profile.description
   end
   def description= value
     self['description'] = value
-    self.supplier.description = value if dummy?
+    self.supplier.description = value if self.dummy? and not self.supplier.frozen?
   end
 
   def abbreviation_or_name
@@ -83,9 +83,9 @@ class SuppliersPlugin::Supplier < Noosfero::Plugin::ActiveRecord
 
   def destroy_with_dummy
     if not self.self? and not self.dont_destroy_dummy and self.supplier.dummy?
-      self.supplier.destroy!
+      self.supplier.destroy
     end
-    destroy_without_dummy
+    self.destroy_without_dummy
   end
   alias_method_chain :destroy, :dummy
 
@@ -100,7 +100,7 @@ class SuppliersPlugin::Supplier < Noosfero::Plugin::ActiveRecord
     self.supplier.save
   end
 
-  def distribute_products_to_consumers
+  def distribute_products_to_consumer
     return if self.self? or self.consumer.person?
 
     already_supplied = self.consumer.distributed_products.unarchived.from_supplier_id(self.id).all

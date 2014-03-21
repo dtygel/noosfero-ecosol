@@ -23,6 +23,7 @@ class ApplicationController < ActionController::Base
       unless environment.access_control_allow_methods.blank?
         response.headers["Access-Control-Allow-Methods"] = environment.access_control_allow_methods
       end
+      response.headers["Access-Control-Allow-Credentials"] = 'true'
     elsif environment.restrict_to_access_control_origins
       render_access_denied _('Origin not in allowed.')
     end
@@ -31,7 +32,11 @@ class ApplicationController < ActionController::Base
   include ApplicationHelper
   layout :get_layout
   def get_layout
+    return nil if request.format == :js
+
+    # FIXME: migrate cirandas theme to use theme_include
     prepend_view_path "public/#{theme_path}"
+
     theme_layout = theme_option(:layout)
     if theme_layout
       theme_view_file('layouts/'+theme_layout) || theme_layout
@@ -184,7 +189,7 @@ class ApplicationController < ActionController::Base
   end
 
   def find_by_contents(asset, scope, query, paginate_options={:page => 1}, options={})
-    @plugins.dispatch_first(:find_by_contents, asset, scope, query, paginate_options, options) ||
+    plugins.dispatch_first(:find_by_contents, asset, scope, query, paginate_options, options) ||
     fallback_find_by_contents(asset, scope, query, paginate_options, options)
   end
 

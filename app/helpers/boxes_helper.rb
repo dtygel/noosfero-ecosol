@@ -39,7 +39,7 @@ module BoxesHelper
   end
 
   def display_boxes(holder, main_content)
-    boxes = holder.boxes.first(@controller.class.custom_design[:boxes_limit] || holder.boxes_limit(@controller.class.custom_design[:layout_template]))
+    boxes = holder.boxes.with_position.first(@controller.class.custom_design[:boxes_limit] || holder.boxes_limit(@controller.class.custom_design[:layout_template]))
     content = boxes.reverse.map { |item| display_box(item, main_content) }.join("\n")
     content = main_content if (content.blank?)
 
@@ -104,14 +104,16 @@ module BoxesHelper
 
     result = filter_html(result, block)
 
-    box_decorator.block_target(block.box, block) +
-      content_tag('div',
-       content_tag('div',
+    content_tag('div',
+      box_decorator.block_target(block.box, block) +
+        content_tag('div',
          content_tag('div',
-           result + footer_content + box_decorator.block_edit_buttons(block),
-           :class => 'block-inner-2'),
-         :class => 'block-inner-1'),
-       options) +
+           content_tag('div',
+             result + footer_content + box_decorator.block_edit_buttons(block),
+             :class => 'block-inner-2'),
+           :class => 'block-inner-1'),
+       options),
+    :class => 'block-outer') +
     box_decorator.block_handle(block)
   end
 
@@ -224,7 +226,7 @@ module BoxesHelper
     end
 
     if block.respond_to?(:help)
-      buttons << thickbox_inline_popup_icon(:help, _('Help on this block'), {}, "help-on-box-#{block.id}") << content_tag('div', content_tag('h2', _('Help')) + content_tag('div', block.help, :style => 'margin-bottom: 1em;') + thickbox_close_button(_('Close')), :style => 'display: none;', :id => "help-on-box-#{block.id}")
+      buttons << colorbox_inline_icon(:help, _('Help on this block'), {}, "#help-on-box-#{block.id}") << content_tag('div', content_tag('h2', _('Help')) + content_tag('div', block.help, :style => 'margin-bottom: 1em;') + colorbox_close_button(_('Close')), :style => 'display: none;', :id => "help-on-box-#{block.id}")
     end
 
     content_tag('div', buttons.join("\n") + tag('br', :style => 'clear: left'), :class => 'button-bar')
@@ -236,15 +238,11 @@ module BoxesHelper
 
   # DEPRECATED. Do not use this.
   def import_blocks_stylesheets(options = {})
-    @blocks_css_files ||= current_blocks.map{|b|'blocks/' + block_css_class_name(b)}.uniq
+    @blocks_css_files ||= current_blocks.map{|block|'blocks/' + block.class.name.to_css_class}.uniq
     stylesheet_import(@blocks_css_files, options)
   end
-
-  def block_css_class_name(block)
-    block.class.name.underscore.gsub('_', '-')
-  end
   def block_css_classes(block)
-    classes = block_css_class_name(block)
+    classes = block.class.name.to_css_class
     classes += ' invisible-block' if block.display == 'never'
     classes
   end

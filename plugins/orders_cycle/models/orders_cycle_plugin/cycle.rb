@@ -9,6 +9,9 @@ class OrdersCyclePlugin::Cycle < Noosfero::Plugin::ActiveRecord
   has_many :cycle_orders, :class_name => 'OrdersCyclePlugin::CycleOrder', :foreign_key => :cycle_id, :dependent => :destroy, :order => 'id ASC'
   has_many :orders, :through => :cycle_orders, :source => :order, :order => 'id ASC'
 
+  has_many :consumers, :through => :orders, :source => :consumer, :order => 'name ASC'
+  has_many :suppliers, :through => :orders, :source => :profile, :order => 'name ASC'
+
   has_many :cycle_products, :foreign_key => :cycle_id, :class_name => 'OrdersCyclePlugin::CycleProduct', :dependent => :destroy
   has_many :products, :through => :cycle_products, :order => 'name ASC',
     :include => [{:from_products => [:from_products, {:sources_from_products => [{:supplier => [{:profile => [:domains]}]}]}]}, {:profile => [:domains]}]
@@ -19,7 +22,8 @@ class OrdersCyclePlugin::Cycle < Noosfero::Plugin::ActiveRecord
     :conditions => ['orders_plugin_orders.status = ?', 'confirmed']
 
   has_many :ordered_suppliers, :through => :orders_confirmed, :source => :suppliers
-  has_many :ordered_products, :through => :orders_confirmed, :source => :products
+  has_many :items, :through => :orders_confirmed, :source => :products
+
   has_many :ordered_offered_products, :through => :orders_confirmed, :source => :offered_products, :uniq => true
   has_many :ordered_distributed_products, :through => :orders_confirmed, :source => :distributed_products, :uniq => true
   has_many :ordered_supplier_products, :through => :orders_confirmed, :source => :supplier_products, :uniq => true
@@ -85,7 +89,7 @@ class OrdersCyclePlugin::Cycle < Noosfero::Plugin::ActiveRecord
     }
   end
   def total_price_asked
-    self.ordered_products.sum :price_asked
+    self.items.sum :price_asked
   end
   def total_parcel_price
     #FIXME: wrong!
@@ -129,7 +133,7 @@ class OrdersCyclePlugin::Cycle < Noosfero::Plugin::ActiveRecord
     self.products.unarchived.with_price
   end
 
-  def ordered_products_by_suppliers
+  def items_by_suppliers
     self.ordered_offered_products.unarchived.group_by{ |p| p.supplier }.map do |supplier, products|
       total_price_asked = total_parcel_price = 0
       products.each do |product|

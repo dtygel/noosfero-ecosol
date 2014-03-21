@@ -1,0 +1,64 @@
+<script type="text/javascript">
+
+  window.fbAsyncInit = function() {
+
+    FB.init({
+
+appId      : '231071397085577',
+
+status     : true,
+
+xfbml      : true
+
+});
+
+};
+
+
+
+(function(d, s, id){
+
+ var js, fjs = d.getElementsByTagName(s)[0];
+
+ if (d.getElementById(id)) {return;}
+
+ js = d.createElement(s); js.id = id;
+
+ js.src = "//connect.facebook.net/en_US/all.js";
+
+ fjs.parentNode.insertBefore(js, fjs);
+
+ }(document, 'script', 'facebook-jssdk'));
+
+
+
+function add_app() {
+
+  FB.ui({
+
+method: 'pagetab',
+
+next: "<%= url_for(:only_path => false, :action => :index).gsub('/fb_app_ecosol_store_plugin', '') %>",
+
+}, function(response){});
+
+}
+
+
+
+jQuery(document).ready(function() {
+
+    jQuery('#add_app').click(function(){
+
+      add_app();
+
+      });
+
+    });
+
+</script>
+
+<div id="firstb-root"></div>
+
+<button id="add_app">Adicionar aplicativo</button>
+

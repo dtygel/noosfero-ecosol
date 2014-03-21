@@ -422,6 +422,9 @@ function add_input_stuff() {
 function input_javascript_stuff(id) {
    jQuery(function() {
       id = 'input-' + id;
+
+      jQuery("#"+id).removeClass('small-loading');
+
       jQuery("#add-"+ id +"-details,#edit-"+id).click(function() {
         target = '#' + id + '-form';
 
@@ -464,7 +467,7 @@ function edit_input_stuff(id, currency_separator) {
          target: "#" + id,
          beforeSubmit: function(a,f,o) {
            o.loading = small_loading('edit-' + id + '-form');
-           o.loaded = loading_done(id);
+           o.loaded = loading_done('edit-' + id + '-form');
          }
       });
 
@@ -873,6 +876,12 @@ Array.min = function(array) {
   return Math.min.apply(Math, array);
 };
 
+function hideAndGetUrl(link) {
+  link.hide();
+  url = jQuery(link).attr('href');
+  jQuery.get(url);
+}
+
 jQuery(function($){
   $('.submit-with-keypress').live('keydown', function(e) {
      field = this;
@@ -895,12 +904,21 @@ jQuery(function($){
      }
    });
 
-  $('.view-all-comments').live('click', function(e) {
-     var link = this;
-     $(link).parent().find('.profile-wall-activities-comments').show();
-     $(link).hide();
+  $('#content').delegate( '.view-all-comments a', 'click', function(e) {
+     hideAndGetUrl(this);
      return false;
+   });
+
+  $('#content').delegate('.view-more-replies a', 'click', function(e) {
+    hideAndGetUrl(this);
+    return false;
   });
+
+  $('#content').delegate('.view-more-comments a', 'click', function(e) {
+    hideAndGetUrl(this);
+    return false;
+  });
+
   $('.focus-on-comment').live('click', function(e) {
      var link = this;
      $(link).parents('.profile-activity-item').find('textarea').focus();
@@ -1061,27 +1079,20 @@ log.error = function() {
   window.log.apply(window, jQuery.merge(['error'], arguments));
 }
 
-jQuery(function($) {
-  $('.colorbox').live('click', function() {
-    $.colorbox({
-      href:       $(this).attr('href'),
-      maxWidth:   $(window).width()-50,
-      height:     $(window).height()-50,
-      open:       true,
-      fixed:      true,
-      close:      'Cancel',
-      onComplete: function(bt) {
-        var opt = {}, maxH = $(window).height()-50;
-        if ($('#cboxLoadedContent *:first').height() > maxH) opt.height = maxH;
-        $.colorbox.resize(opt);
-      }
-    });
-    return false;
-  });
+function showHideTermsOfUse() {
+  if( jQuery("#article_has_terms_of_use").attr("checked") )
+    jQuery("#text_area_terms_of_use").show();
+  else {
+    jQuery("#text_area_terms_of_use").hide();
+    jQuery("#article_terms_of_use").val("");
+    jQuery("#article_terms_of_use_ifr").contents().find("body").html("");
+  }
+}
 
-  $('.colorbox-close').live('click', function() {
-    $.colorbox.close();
-    return false;
-  });
+jQuery(document).ready(function(){
+  showHideTermsOfUse();
 
+  jQuery("#article_has_terms_of_use").click(function(){
+    showHideTermsOfUse();
+  });
 });

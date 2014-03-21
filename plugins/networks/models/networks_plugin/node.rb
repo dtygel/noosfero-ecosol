@@ -1,16 +1,16 @@
 class NetworksPlugin::Node < NetworksPlugin::BaseNode
 
-  before_validation :generate_identifier
-  before_destroy :assign_dependent_to_parent
+  ParentDelimiter = '::'
 
-  def node?
-    true
-  end
+  before_validation :name_to_identifier
+  after_destroy :assign_dependent_to_parent
+
+  delegate :admins, :to => :network
 
   protected
 
-  def generate_identifier
-    self.identifier = Digest::MD5.hexdigest rand.to_s
+  def name_to_identifier
+    self.identifier = "#{self.parent.identifier}#{ParentDelimiter}#{self.name.to_slug}"
   end
 
   def assign_dependent_to_parent
@@ -18,14 +18,15 @@ class NetworksPlugin::Node < NetworksPlugin::BaseNode
       relation.parent = self.parent
       relation.save!
     end
-    # suppliers are frozen, so create new ones
+    # 'suppliers' has_many is frozen, so create new ones
     self.suppliers.each do |supplier|
       next if supplier.self?
       supplier.dont_destroy_dummy = true
       new_supplier = self.parent.suppliers.build :profile => supplier.profile
       new_supplier.attributes = supplier.attributes
       new_supplier.consumer = self.parent
-      new_supplier.save!
+      # Avoid "can't modify frozen hash" error
+      new_supplier.send :create_without_callbacks
     end
   end
 

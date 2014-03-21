@@ -12,12 +12,12 @@ class OrdersPlugin::Order
   end
 
   # overhide with stronger eager load
-  has_many :products, :class_name => 'OrdersPlugin::OrderedProduct', :foreign_key => :order_id, :dependent => :destroy,
+  has_many :items, :class_name => 'OrdersPlugin::Item', :foreign_key => :order_id, :dependent => :destroy,
     :order => 'products.name ASC',
     :include => {:product => [{:from_products => {:from_products => {:sources_from_products => [{:supplier => [{:profile => [:domains, {:environment => :domains}]}]}]}}},
                               {:profile => [:domains, {:environment => :domains}]}, ]}
 
-  has_many :offered_products, :through => :products, :source => :offered_product
+  has_many :offered_products, :through => :items, :source => :offered_product
   has_many :distributed_products, :through => :offered_products, :source => :from_products
   has_many :supplier_products, :through => :distributed_products, :source => :from_products
 
@@ -32,31 +32,25 @@ class OrdersPlugin::Order
     self.cycle.delivery?
   end
   def forgotten?
-    self.draft? && !cycle.orders?
+    self.draft? and !cycle.orders?
   end
   def open?
-    self.draft? && cycle.orders?
-  end
-
-  def may_edit? admin_action = false
-    self.open? or admin_action
+    self.draft? and cycle.orders?
   end
 
   extend CodeNumbering::ClassMethods
-  code_numbering :code, :scope => Proc.new { self.cycle.orders }
+  code_numbering :code, :scope => proc{ if self.cycle then self.cycle.orders else self.profile.orders end }
+
   def code
-    if self.cycle
-      I18n.t('orders_cycle_plugin.lib.ext.orders_plugin.order.cyclecode_ordercode') % {
-        :cyclecode => self.cycle.code, :ordercode => self['code']
-      }
-    else
-      super
-    end
+    return super unless self.cycle
+    I18n.t('orders_cycle_plugin.lib.ext.orders_plugin.order.cyclecode_ordercode') % {
+      :cyclecode => self.cycle.code, :ordercode => self['code']
+    }
   end
 
   alias_method :supplier_delivery!, :supplier_delivery
   def supplier_delivery
-    supplier_delivery! || self.cycle.delivery_methods.first
+    self.supplier_delivery! || self.cycle.delivery_methods.first if self.cycle
   end
   def supplier_delivery_id
     self['supplier_delivery_id'] || self.cycle.delivery_methods.first.id

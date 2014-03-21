@@ -1,3 +1,5 @@
+require_dependency "#{File.dirname __FILE__}/ext/profile"
+
 class ShoppingCartPlugin < Noosfero::Plugin
 
   class << self
@@ -23,8 +25,8 @@ class ShoppingCartPlugin < Noosfero::Plugin
   end
 
   def add_to_cart_button(item)
-    enterprise = item.enterprise
-    settings = Noosfero::Plugin::Settings.new(enterprise, ShoppingCartPlugin)
+    profile = item.profile
+    settings = Noosfero::Plugin::Settings.new(profile, ShoppingCartPlugin)
     if settings.enabled && item.available
        lambda {
          link_to(_('Add to basket'), "add:#{item.name}",
@@ -56,9 +58,6 @@ class ShoppingCartPlugin < Noosfero::Plugin
     buttons = []
     if context.profile.enterprise?
       buttons << { :title => _('Shopping basket'), :icon => 'shopping-cart-icon', :url => {:controller => 'shopping_cart_plugin_myprofile', :action => 'edit'} }
-    end
-    if context.profile.enterprise? && settings.enabled
-      buttons << { :title => _('Purchase reports'), :icon => 'shopping-cart-purchase-report', :url => {:controller => 'shopping_cart_plugin_myprofile', :action => 'reports'} }
     end
 
     buttons

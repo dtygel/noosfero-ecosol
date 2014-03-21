@@ -6,9 +6,7 @@ module ApplicationHelper
 
   include PermissionNameHelper
 
-  include LightboxHelper
-
-  include ThickboxHelper
+  include PaginationHelper
 
   include ColorboxHelper
 
@@ -45,6 +43,10 @@ module ApplicationHelper
   include Noosfero::Gravatar
 
   include CatalogHelper
+
+  include TokenHelper
+
+  include CaptchaHelper
 
   def locale
     (@page && !@page.language.blank?) ? @page.language : FastGettext.locale
@@ -942,11 +944,6 @@ module ApplicationHelper
   end
   alias :browse_communities_menu :search_communities_menu
 
-  def pagination_links(collection, options={})
-    options = {:previous_label => '&laquo; ' + _('Previous'), :next_label => _('Next') + ' &raquo;'}.merge(options)
-    will_paginate(collection, options)
-  end
-
   def render_environment_features(folder)
     result = ''
     environment.enabled_features.keys.each do |feature|
@@ -976,12 +973,12 @@ module ApplicationHelper
   end
 
   def manage_enterprises
-    return unless user
+    return unless user && user.environment.enabled?(:display_my_enterprises_on_user_menu)
     manage_link(user.enterprises, :enterprises)
   end
 
   def manage_communities
-    return unless user && user.environment.enabled?('display_my_communities_on_user_menu')
+    return unless user && user.environment.enabled?(:display_my_communities_on_user_menu)
     administered_communities = user.communities.more_popular.select {|c| c.admins.include? user}
     manage_link(administered_communities, :communities)
   end
@@ -1115,7 +1112,7 @@ module ApplicationHelper
             :profile => profile.identifier }
     url.merge!({:content_type => content.class.name, :content_id => content.id}) if content
     text = content_tag('span', _('Report abuse'))
-    klass = 'report-abuse-action'
+    klass = 'report-abuse-action colorbox'
     already_reported_message = _('You already reported this profile.')
     report_profile_message = _('Report this profile for abusive behaviour')
 
@@ -1154,10 +1151,6 @@ module ApplicationHelper
     content_tag(:div, content_tag(:ul, titles) + raw(contents), :class => 'ui-tabs')
   end
 
-  def jquery_token_input_messages_json(hintText = _('Type in an keyword'), noResultsText = _('No results'), searchingText = _('Searching...'))
-    "hintText: '#{hintText}', noResultsText: '#{noResultsText}', searchingText: '#{searchingText}'"
-  end
-
   def delete_article_message(article)
     if article.folder?
       _("Are you sure that you want to remove the folder \"#{article.name}\"? Note that all the items inside it will also be removed!")
@@ -1179,8 +1172,8 @@ module ApplicationHelper
     @plugins.dispatch("content_remove_#{action.to_s}", @page).include?(true)
   end
 
-  def template_options(klass, field_name)
-    templates = klass.templates(environment)
+  def template_options(kind, field_name)
+    templates = environment.send(kind).templates
     return '' if templates.count == 0
     return hidden_field_tag("#{field_name}[template_id]", templates.first.id) if templates.count == 1
 
@@ -1196,50 +1189,6 @@ module ApplicationHelper
       :id => 'template-options',
       :style => 'margin-top: 1em'
     )
-  end
-
-  def token_input_field_tag(name, element_id, search_action, options = {}, text_field_options = {}, html_options = {})
-    options[:min_chars] ||= 3
-    options[:hint_text] ||= _("Type in a search term")
-    options[:no_results_text] ||= _("No results")
-    options[:searching_text] ||= _("Searching...")
-    options[:search_delay] ||= 1000
-    options[:prevent_duplicates] ||=  true
-    options[:backspace_delete_item] ||= false
-    options[:focus] ||= false
-    options[:avoid_enter] ||= true
-    options[:on_result] ||= 'null'
-    options[:on_add] ||= 'null'
-    options[:on_delete] ||= 'null'
-    options[:on_ready] ||= 'null'
-
-    result = text_field_tag(name, nil, text_field_options.merge(html_options.merge({:id => element_id})))
-    result += javascript_tag("jQuery('##{element_id}')
-      .tokenInput('#{url_for(search_action)}', {
-        minChars: #{options[:min_chars].to_json},
-        prePopulate: #{options[:pre_populate].to_json},
-        hintText: #{options[:hint_text].to_json},
-        noResultsText: #{options[:no_results_text].to_json},
-        searchingText: #{options[:searching_text].to_json},
-        searchDelay: #{options[:serach_delay].to_json},
-        preventDuplicates: #{options[:prevent_duplicates].to_json},
-        backspaceDeleteItem: #{options[:backspace_delete_item].to_json},
-        queryParam: #{name.to_json},
-        tokenLimit: #{options[:token_limit].to_json},
-        onResult: #{options[:on_result]},
-        onAdd: #{options[:on_add]},
-        onDelete: #{options[:on_delete]},
-        onReady: #{options[:on_ready]},
-      });
-    ")
-    result += javascript_tag("jQuery('##{element_id}').focus();") if options[:focus]
-    if options[:avoid_enter]
-      result += javascript_tag("jQuery('#token-input-#{element_id}')
-                    .live('keydown', function(event){
-                    if(event.keyCode == '13') return false;
-                    });")
-    end
-    result
   end
 
   def expirable_content_reference(content, action, text, url, options = {})
@@ -1270,8 +1219,8 @@ module ApplicationHelper
   end
 
   def filter_html(html, source)
-    if @plugins && source.has_macro?
-      html = convert_macro(html, source)
+    if @plugins && source && source.has_macro?
+      html = convert_macro(html, source) unless @plugins.enabled_macros.blank?
       #TODO This parse should be done through the macro infra, but since there
       #     are old things that do not support it we are keeping this hot spot.
       html = @plugins.pipeline(:parse_content, html, source).first

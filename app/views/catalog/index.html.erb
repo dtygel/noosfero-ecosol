@@ -1,0 +1,27 @@
+<% extra_content = [] %>
+<% extra_content_list = [] %>
+
+<div id="product-catalog">
+  <% if !user.nil? && ( user.is_admin?(profile.environment) || user.is_admin?(profile) ) %>
+    <div class="product-catalog-ctrl">
+      <%= button :product, _('Manage Products/Services'), :controller => 'manage_products' %>
+    </div>
+  <% end %>
+
+  <h1><%= _('Products/Services') %></h1>
+
+  <%= breadcrumb(@category) if params[:level] %>
+
+  <ul id="product-list">
+    <%= render 'catalog/products', :products => @products %>
+  </ul>
+
+  <%= render 'catalog/pagination' %>
+  <% javascript_tag do %>
+    pagination.infiniteScroll(<%= _('loading...').to_json %>);
+  <% end %>
+
+  <%= add_zoom_to_images %>
+
+  <br style="clear:both"/>
+</div>

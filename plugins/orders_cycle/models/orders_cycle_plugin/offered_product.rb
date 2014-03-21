@@ -6,8 +6,8 @@ class OrdersCyclePlugin::OfferedProduct < SuppliersPlugin::BaseProduct
     self.cycles.first
   end
 
-  has_many :ordered_products, :class_name => 'OrdersPlugin::OrderedProduct', :foreign_key => :product_id, :dependent => :destroy
-  has_many :orders, :through => :ordered_products, :source => :order
+  has_many :items, :class_name => 'OrdersPlugin::Item', :foreign_key => :product_id, :dependent => :destroy
+  has_many :orders, :through => :items, :source => :order
 
   named_scope :sources_from_2x_products_joins, :joins =>
     'INNER JOIN suppliers_plugin_source_products sources_from_products_products ON ( products.id = sources_from_products_products.to_product_id ) ' +
@@ -43,21 +43,20 @@ class OrdersCyclePlugin::OfferedProduct < SuppliersPlugin::BaseProduct
   has_currency :buy_price
 
   def self.create_from_distributed cycle, product
-    sp = self.new :profile => product.profile
-    sp.attributes = product.attributes
-    sp.type = self.name
-    sp.freeze_default_attributes product
-    sp.price = sp.price_with_margins product.price, product
-    sp.from_products << product
-    cycle.products << sp
-    sp
+    op = self.new :profile => product.profile
+    op.attributes = product.attributes
+    op.type = self.name
+    op.freeze_default_attributes product
+    op.from_products << product
+    cycle.products << op
+    op
   end
 
   def total_quantity_asked
-    @total_quantity_asked ||= self.ordered_products.confirmed.sum(:quantity_asked)
+    @total_quantity_asked ||= self.items.confirmed.sum(:quantity_asked)
   end
   def total_price_asked
-    @total_price_asked ||= self.ordered_products.confirmed.sum(:price_asked)
+    @total_price_asked ||= self.items.confirmed.sum(:price_asked)
   end
   def total_parcel_quantity
     #FIXME: convert units and consider stock and availability
@@ -107,9 +106,9 @@ class OrdersCyclePlugin::OfferedProduct < SuppliersPlugin::BaseProduct
   after_update :sync_ordered
   def sync_ordered
     return unless self.price_changed?
-    ordered_products.each do |op|
-      op.send :calculate_prices
-      op.save!
+    self.items.each do |item|
+      item.send :calculate_prices
+      item.save!
     end
   end
 

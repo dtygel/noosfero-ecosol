@@ -3,10 +3,10 @@ module ConsumersCoopPlugin::TranslationHelper
   protected
 
   # included here to be used on controller's t calls
-  include SuppliersPlugin::TermsHelper
+  include TermsHelper
 
-  def terms_context
-    'consumers_coop_plugin'
+  def i18n_scope
+    ['consumers_coop_plugin', 'suppliers_plugin', 'orders_cycle_plugin']
   end
 
 end

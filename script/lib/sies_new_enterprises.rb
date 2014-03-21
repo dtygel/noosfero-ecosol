@@ -93,7 +93,7 @@ end
 def export_imported enterprises
   filename = "sies_new_enterprises-imported-list.csv"
   CSV.open filename, "w" do |csv|
-    csv << ['Id sies', 'nome', 'url', 'uf', 'cidade', 'código ativação', 'ano fundação', 'nome para contato', 'telefone', 'email']
+    csv << ['Id sies', 'nome', 'url', 'uf', 'cidade', 'código ativação', 'ano fundação', 'nome para contato', 'indicado pelo forum', 'telefones', 'email']
 
     enterprises.each do |data|
       enterprise = data[:record]
@@ -102,17 +102,20 @@ def export_imported enterprises
       activation_task = enterprise.tasks.where(:type => 'EnterpriseActivation').first
       url = "#{$environment.top_url}/#{enterprise.identifier}"
 
+      contact_phone = ([enterprise.data[:contact_phone]] + (enterprise.data[:private] || {}).values).join ', '
+
       csv << [
         enterprise.data[:id_sies],
         enterprise.name,
         url,
         enterprise.data[:state],
         enterprise.data[:city],
-        activation_task.code,
+        (activation_task.code rescue ''),
         enterprise.data[:foundation_year],
         enterprise.data[:contact_person],
-        enterprise.contact_phone,
-        enterprise.data[:contact_email]
+        if enterprise.enabled and enterprise.created_at.year > 2012 then 'sim' else '' end,
+        contact_phone,
+        enterprise.data[:contact_email],
       ]
     end
   end
